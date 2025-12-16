@@ -92,7 +92,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
     const printWindow = window.open('', '', 'width=300,height=600');
     const itemsHtml = data.items.map(item => `
       <tr>
-        <td>${item.name}</td>
+        <td>${item.product_name}</td>
         <td align="right">${item.qty}x</td>
         <td align="right">${formatCurrency(item.price * item.qty)}</td>
       </tr>
@@ -111,9 +111,9 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
           </style>
         </head>
         <body>
-          <div class="center bold" style="font-size: 16px;">TOKO KUE MANIS</div>
-          <div class="center">Jl. Manis No. 123</div>
-          <div class="center">Telp: 0812-3456-7890</div>
+          <div class="center bold" style="font-size: 16px;">BAKE BLISS</div>
+          <div class="center">Jl. Ahmad Yani No. 24A</div>
+          <div class="center">Magelang</div>
           <div class="line"></div>
           <div>No: ${data.transactionNo}</div>
           <div>${new Date().toLocaleString('id-ID')}</div>
@@ -145,8 +145,10 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
             </tr>
           </table>
           <div class="line"></div>
-          <div class="center">Terima kasih</div>
-          <div class="center">Selamat menikmati 🍰</div>
+          <div class="center">0881-0124-64949</div>
+          <div class="center">We love to hear your feedback (the sweet and the bitter one😋)</div>
+          <br>
+          <div class="center">Thank you!</div>
         </body>
       </html>
     `);
@@ -316,7 +318,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
               <h2 className="text-lg font-bold">Detail Transaksi</h2>
               <button
                 onClick={() => setSelectedTransaction(null)}
-                className="p-2 hover:bg-gray-700 rounded-lg"
+                className="p-2 hover:bg-gray-700 hover:text-red rounded-lg"
               >
                 <X size={20} />
               </button>

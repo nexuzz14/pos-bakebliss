@@ -97,7 +97,7 @@ export function CashierPage({ printerService, printerConnected, onShowToast }) {
         change
         });
 
-        const transactionNo = `TRX${Date.now()}`;
+        // const transactionNo = `TRX${Date.now()}`;
 
         setLoading(true);
 
@@ -112,7 +112,7 @@ export function CashierPage({ printerService, printerConnected, onShowToast }) {
                 items: cart
             });
 
-            const transactionId = trx.id; // ✅ AMAN SEKARANG
+            // const transactionId = trx.id; // ✅ AMAN SEKARANG
 
 
             // ✅ SIMPAN ITEM TRANSAKSI
@@ -128,7 +128,7 @@ export function CashierPage({ printerService, printerConnected, onShowToast }) {
 
             // PRINT DATA
             const printData = {
-            transactionNo,
+            transactionNo: trx.transaction_no,
             items: cart,
             subtotal,
             shippingCost,
@@ -191,9 +191,9 @@ export function CashierPage({ printerService, printerConnected, onShowToast }) {
           </style>
         </head>
         <body>
-          <div class="center bold" style="font-size: 16px;">TOKO KUE MANIS</div>
-          <div class="center">Jl. Manis No. 123</div>
-          <div class="center">Telp: 0812-3456-7890</div>
+          <div class="center bold" style="font-size: 16px;">BAKE BLISS</div>
+          <div class="center">Jl. Ahmad Yani No. 24A</div>
+          <div class="center">Magelang</div>
           <div class="line"></div>
           <div>No: ${data.transactionNo}</div>
           <div>${new Date().toLocaleString('id-ID')}</div>
@@ -225,8 +225,10 @@ export function CashierPage({ printerService, printerConnected, onShowToast }) {
             </tr>
           </table>
           <div class="line"></div>
-          <div class="center">Terima kasih</div>
-          <div class="center">Selamat menikmati 🍰</div>
+          <div class="center">0881-0124-64949</div>
+          <div class="center">We love to hear your feedback (the sweet and the bitter one😋)</div>
+          <br>
+          <div class="center">Thank you!</div>
         </body>
       </html>
     `);

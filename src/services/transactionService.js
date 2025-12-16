@@ -3,13 +3,12 @@ import { supabase } from './supabase';
 export const transactionService = {
   async create(data) {
     try {
-      const transactionNo = `TRX${Date.now()}`;
+      // const transactionNo = `TRX${Date.now()}`;
 
       // ✅ INSERT TRANSACTION (WAJIB ARRAY)
       const { data: trx, error } = await supabase
         .from('transactions')
         .insert([{
-          transaction_no: transactionNo,
           total: data.total,
           shipping_cost: data.shipping_cost || 0,
           grand_total: data.grand_total,
@@ -24,6 +23,7 @@ export const transactionService = {
       // ✅ INSERT ITEMS
       const items = data.items.map(item => ({
         transaction_id: trx.id,
+        product_id: item.id,
         product_name: item.name,
         price: item.price,
         qty: item.qty,
@@ -46,7 +46,17 @@ export const transactionService = {
   async getAll() {
     const { data, error } = await supabase
       .from('transactions')
-      .select('*')
+      .select(`
+        *,
+        items:transaction_items (
+          id,
+          product_id,
+          product_name,
+          qty,
+          price,
+          subtotal
+        )
+      `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
