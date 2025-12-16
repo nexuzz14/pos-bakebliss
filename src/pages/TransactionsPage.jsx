@@ -177,24 +177,37 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
   return (
     <div className="space-y-4">
       {/* Stats */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="
+          bg-white text-gray-900
+          dark:bg-gray-800 dark:text-white
+          rounded-lg p-4
+        ">
         <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
           <Receipt size={24} />
           Riwayat Transaksi
         </h2>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-gray-700 p-3 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-400">{stats.count}</div>
-            <div className="text-xs text-gray-400">Transaksi</div>
+          <div className="
+            bg-gray-100 dark:bg-gray-700
+            p-3 rounded-lg text-center
+          ">
+            <div className="text-2xl font-bold text-blue-500 dark:text-blue-400">{stats.count}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Transaksi</div>
           </div>
-          <div className="bg-gray-700 p-3 rounded-lg text-center">
-            <div className="text-lg font-bold text-green-400">{formatCurrency(stats.total)}</div>
-            <div className="text-xs text-gray-400">Total</div>
+          <div className="
+            bg-gray-100 dark:bg-gray-700
+            p-3 rounded-lg text-center
+          ">
+            <div className="text-lg font-bold text-green-500 dark:text-green-400">{formatCurrency(stats.total)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
           </div>
-          <div className="bg-gray-700 p-3 rounded-lg text-center">
-            <div className="text-lg font-bold text-yellow-400">{formatCurrency(stats.avg)}</div>
-            <div className="text-xs text-gray-400">Rata-rata</div>
+          <div className="
+            bg-gray-100 dark:bg-gray-700
+            p-3 rounded-lg text-center
+          ">
+            <div className="text-lg font-bold text-yellow-500 dark:text-yellow-400">{formatCurrency(stats.avg)}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Rata-rata</div>
           </div>
         </div>
       </div>
@@ -204,7 +217,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-            filter === 'all' ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'
+            filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700'
           }`}
         >
           Semua
@@ -212,7 +225,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
         <button
           onClick={() => setFilter('today')}
           className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-            filter === 'today' ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'
+            filter === 'today' ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700'
           }`}
         >
           Hari Ini
@@ -220,7 +233,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
         <button
           onClick={() => setFilter('week')}
           className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-            filter === 'week' ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'
+            filter === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700'
           }`}
         >
           7 Hari
@@ -228,7 +241,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
         <button
           onClick={() => setFilter('month')}
           className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-            filter === 'month' ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'
+            filter === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700'
           }`}
         >
           30 Hari
@@ -255,32 +268,32 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
             <div
               key={transaction.transaction_no}
               onClick={() => setSelectedTransaction(transaction)}
-              className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 cursor-pointer transition-colors"
+              className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
-                  <div className="font-mono text-sm text-blue-400 mb-1">
+                  <div className="font-mono text-sm text-blue-500 dark:text-blue-400 mb-1">
                     {transaction.transaction_no}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <Calendar size={12} />
                     <span>{formatDate(transaction.created_at)}</span>
                     <span>•</span>
                     <span>{formatTime(transaction.created_at)}</span>
                   </div>
                 </div>
-                <ChevronRight size={20} className="text-gray-500" />
+                <ChevronRight size={20} className="text-gray-600 dark:text-gray-500" />
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-700">
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-1">
-                    <Package size={14} className="text-gray-400" />
+                    <Package size={14} className="text-gray-500 dark:text-gray-400" />
                     <span>{transaction.items?.length || 0} item</span>
                   </div>
                   {transaction.shipping_cost > 0 && (
                     <div className="flex items-center gap-1">
-                      <Truck size={14} className="text-gray-400" />
+                      <Truck size={14} className="text-gray-500 dark:text-gray-400" />
                       <span>{formatCurrency(transaction.shipping_cost)}</span>
                     </div>
                   )}
@@ -296,10 +309,10 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
 
       {/* Transaction Detail Modal */}
       {selectedTransaction && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-gray-800">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 dark:border-gray-700">
               <h2 className="text-lg font-bold">Detail Transaksi</h2>
               <button
                 onClick={() => setSelectedTransaction(null)}
@@ -312,7 +325,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
             {/* Content */}
             <div className="p-4 space-y-4">
               {/* Transaction Info */}
-              <div className="bg-gray-700 p-3 rounded-lg">
+              <div className="bg-white text-gray-900 dark:bg-gray-800 dark:text-white p-3 rounded-lg">
                 <div className="font-mono text-sm text-blue-400 mb-2">
                   {selectedTransaction.transaction_no}
                 </div>
@@ -326,69 +339,113 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
 
               {/* Items */}
               <div>
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
-                  <Package size={16} />
-                  Item ({selectedTransaction.items?.length || 0})
-                </h3>
-                <div className="space-y-2">
-                  {selectedTransaction.items?.map((item, index) => (
-                    <div key={index} className="bg-gray-700 p-3 rounded-lg">
-                      <div className="flex justify-between items-start mb-1">
-                        <div className="flex-1">
-                          <div className="font-semibold text-sm">{item.name}</div>
-                          <div className="text-xs text-gray-400">
-                            {formatCurrency(item.price)} x {item.qty}
+                  <h3 className="font-semibold mb-2 flex items-center gap-2 text-gray-900 dark:text-white">
+                    <Package size={16} className="text-gray-600 dark:text-gray-300" />
+                    Item ({selectedTransaction.items?.length || 0})
+                  </h3>
+
+                  <div className="space-y-2">
+                    {selectedTransaction.items?.map((item, index) => (
+                      <div
+                        key={index}
+                        className="
+                          p-3 rounded-lg
+                          bg-gray-100
+                          dark:bg-gray-700
+                        "
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="flex-1">
+                            <div className="font-semibold text-sm text-gray-900 dark:text-white">
+                              {item.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatCurrency(item.price)} x {item.qty}
+                            </div>
+                          </div>
+
+                          <div className="font-semibold text-blue-600 dark:text-blue-400">
+                            {formatCurrency(item.price * item.qty)}
                           </div>
                         </div>
-                        <div className="font-semibold text-blue-400">
-                          {formatCurrency(item.price * item.qty)}
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+
 
               {/* Summary */}
-              <div className="bg-gray-700 p-3 rounded-lg space-y-2">
+              <div
+                className="
+                  p-3 rounded-lg space-y-2
+                  bg-gray-100
+                  dark:bg-gray-700
+                "
+              >
+                {/* Subtotal */}
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Subtotal:</span>
-                  <span className="font-semibold">{formatCurrency(selectedTransaction.total)}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {formatCurrency(selectedTransaction.total)}
+                  </span>
                 </div>
-                
+
+                {/* Ongkir */}
                 {selectedTransaction.shipping_cost > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400 flex items-center gap-1">
+                    <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
                       <Truck size={14} />
                       Ongkir:
                     </span>
-                    <span className="font-semibold">{formatCurrency(selectedTransaction.shipping_cost)}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {formatCurrency(selectedTransaction.shipping_cost)}
+                    </span>
                   </div>
                 )}
 
-                <div className="border-t border-gray-600 pt-2 flex justify-between font-bold">
-                  <span>TOTAL:</span>
-                  <span className="text-green-400 text-lg">
+                {/* Total */}
+                <div
+                  className="
+                    border-t pt-2 flex justify-between font-bold
+                    border-gray-300
+                    dark:border-gray-600
+                  "
+                >
+                  <span className="text-gray-900 dark:text-white">TOTAL:</span>
+                  <span className="text-green-600 dark:text-green-400 text-lg">
                     {formatCurrency(selectedTransaction.grand_total)}
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm border-t border-gray-600 pt-2">
-                  <span className="text-gray-400">Bayar:</span>
-                  <span>{formatCurrency(selectedTransaction.paid)}</span>
+                {/* Bayar */}
+                <div
+                  className="
+                    flex justify-between text-sm border-t pt-2
+                    border-gray-300
+                    dark:border-gray-600
+                  "
+                >
+                  <span className="text-gray-600 dark:text-gray-400">Bayar:</span>
+                  <span className="text-gray-900 dark:text-white">
+                    {formatCurrency(selectedTransaction.paid)}
+                  </span>
                 </div>
 
+                {/* Kembali */}
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Kembali:</span>
-                  <span className="text-green-400">{formatCurrency(selectedTransaction.change)}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Kembali:</span>
+                  <span className="text-green-600 dark:text-green-400 font-semibold">
+                    {formatCurrency(selectedTransaction.change)}
+                  </span>
                 </div>
               </div>
+
 
               {/* Reprint Button */}
               <button
                 onClick={() => handleReprint(selectedTransaction)}
                 disabled={printing}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 p-3 rounded-lg font-medium flex items-center justify-center gap-2"
+                className="w-full bg-blue-600 text-white hover:bg-blue-700 dark:text-black disabled:bg-gray-600 p-3 rounded-lg font-medium flex items-center justify-center gap-2"
               >
                 <Printer size={20} />
                 {printing ? 'Mencetak...' : 'Cetak Ulang Nota'}

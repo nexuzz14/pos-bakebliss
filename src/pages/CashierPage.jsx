@@ -245,25 +245,42 @@ export function CashierPage({ printerService, printerConnected, onShowToast }) {
       <div className="grid grid-cols-2 gap-3 mb-4">
         {products.map(product => (
           <button
-            key={product.id}
-            onClick={() => addToCart(product)}
-            className="bg-gray-800 p-4 rounded-lg hover:bg-gray-700 active:bg-gray-600 transition-colors"
-          >
-            <div className="font-semibold text-sm mb-1">{product.name}</div>
-            <div className="text-blue-400 text-xs">{formatCurrency(product.price)}</div>
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className="
+                    bg-white dark:bg-gray-800
+                    text-gray-900 dark:text-white
+                    p-4 rounded-lg
+                    hover:bg-gray-100 dark:hover:bg-gray-700
+                    active:bg-gray-200 dark:active:bg-gray-600
+                    transition-colors
+                    border border-gray-200 dark:border-gray-700
+                  "
+                >
+              <div className="font-semibold text-sm mb-1">
+                {product.name}
+              </div>
+              <div className="text-blue-600 dark:text-blue-400 text-xs">
+                {formatCurrency(product.price)}
+              </div>
           </button>
+
         ))}
       </div>
 
       {/* Cart */}
-      <div className="bg-gray-800 rounded-lg p-4 mb-4">
-        <h2 className="font-bold mb-3 flex items-center gap-2">
+      <div className="
+          bg-white dark:bg-gray-800
+          rounded-lg p-4 mb-4
+          border border-gray-200 dark:border-gray-700
+        ">
+        <h2 className="font-bold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
           <ShoppingCart size={18} />
           Keranjang ({cart.length})
         </h2>
         
         {cart.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-4">Belum ada item</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Belum ada item</p>
         ) : (
           <div className="space-y-2">
             {cart.map(item => (

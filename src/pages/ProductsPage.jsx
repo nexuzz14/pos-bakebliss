@@ -91,7 +91,11 @@ export function ProductsPage({ onShowToast }) {
   return (
     <div className="space-y-4">
       {/* Header & Stats */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="
+          bg-white dark:bg-gray-800
+          rounded-lg p-4
+          border border-gray-200 dark:border-gray-700
+        ">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Package size={24} />
@@ -99,7 +103,7 @@ export function ProductsPage({ onShowToast }) {
           </h2>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-medium flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-medium flex items-center gap-2 text-white dark:text-black"
           >
             <Plus size={20} />
             Tambah
@@ -108,17 +112,26 @@ export function ProductsPage({ onShowToast }) {
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-gray-700 p-3 rounded-lg text-center">
+          <div className="
+            bg-gray-100 dark:bg-gray-700
+            p-3 rounded-lg text-center
+          ">
             <div className="text-2xl font-bold text-blue-400">{stats.total}</div>
-            <div className="text-xs text-gray-400">Total</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
           </div>
-          <div className="bg-gray-700 p-3 rounded-lg text-center">
+          <div className="
+            bg-gray-100 dark:bg-gray-700
+            p-3 rounded-lg text-center
+          ">
             <div className="text-2xl font-bold text-green-400">{stats.active}</div>
-            <div className="text-xs text-gray-400">Aktif</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Aktif</div>
           </div>
-          <div className="bg-gray-700 p-3 rounded-lg text-center">
+          <div className="
+              bg-gray-100 dark:bg-gray-700
+              p-3 rounded-lg text-center
+            ">
             <div className="text-2xl font-bold text-red-400">{stats.inactive}</div>
-            <div className="text-xs text-gray-400">Nonaktif</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Nonaktif</div>
           </div>
         </div>
       </div>
@@ -128,7 +141,13 @@ export function ProductsPage({ onShowToast }) {
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-            filter === 'all' ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'
+            filter === 'all'
+            ? 'bg-blue-600 text-white'
+            : `
+              bg-gray-100 dark:bg-gray-800
+              hover:bg-gray-200 dark:hover:bg-gray-700
+              text-gray-900 dark:text-white
+            `
           }`}
         >
           Semua ({stats.total})
@@ -136,7 +155,13 @@ export function ProductsPage({ onShowToast }) {
         <button
           onClick={() => setFilter('active')}
           className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-            filter === 'active' ? 'bg-green-600' : 'bg-gray-800 hover:bg-gray-700'
+            filter === 'active'
+              ? 'bg-green-600 text-white'
+              : `
+                  bg-gray-100 dark:bg-gray-800
+                  hover:bg-gray-200 dark:hover:bg-gray-700
+                  text-gray-900 dark:text-white
+                `
           }`}
         >
           Aktif ({stats.active})
@@ -144,7 +169,13 @@ export function ProductsPage({ onShowToast }) {
         <button
           onClick={() => setFilter('inactive')}
           className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap ${
-            filter === 'inactive' ? 'bg-red-600' : 'bg-gray-800 hover:bg-gray-700'
+            filter === 'inactive'
+              ? 'bg-red-600 text-white'
+              : `
+                  bg-gray-100 dark:bg-gray-800
+                  hover:bg-gray-200 dark:hover:bg-gray-700
+                  text-gray-900 dark:text-white
+                `
           }`}
         >
           Nonaktif ({stats.inactive})
@@ -173,9 +204,11 @@ export function ProductsPage({ onShowToast }) {
           {filteredProducts.map(product => (
             <div
               key={product.id}
-              className={`bg-gray-800 rounded-lg p-4 ${
-                !product.active ? 'opacity-60' : ''
-              }`}
+              className={`bg-white dark:bg-gray-800
+                rounded-lg p-4
+                border border-gray-200 dark:border-gray-700
+                ${!product.active ? 'opacity-60' : ''}
+              `}
             >
               <div className="flex items-start gap-3">
                 <div className="flex-1">
@@ -191,7 +224,7 @@ export function ProductsPage({ onShowToast }) {
                       </span>
                     )}
                   </div>
-                  <div className="text-blue-400 font-semibold">
+                  <div className="text-blue-600 dark:text-blue-400 font-semibold">
                     {formatCurrency(product.price)}
                   </div>
                 </div>
@@ -211,7 +244,7 @@ export function ProductsPage({ onShowToast }) {
                       setEditProduct(product);
                       setShowForm(true);
                     }}
-                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
+                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white dark:text-black"
                     title="Edit"
                   >
                     <Edit2 size={18} />
@@ -219,7 +252,7 @@ export function ProductsPage({ onShowToast }) {
                   {product.active && (
                     <button
                       onClick={() => setDeleteProduct(product)}
-                      className="p-2 bg-red-600 hover:bg-red-700 rounded-lg"
+                      className="p-2 bg-red-600 hover:bg-red-700 rounded-lg text-white dark:text-black"
                       title="Nonaktifkan"
                     >
                       <Trash2 size={18} />
