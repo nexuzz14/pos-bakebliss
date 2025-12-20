@@ -1,318 +1,313 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingCart } from 'lucide-react';
-import { productService } from '../services/productService';
-import { transactionService } from '../services/transactionService';
-import { CartItem } from '../components/CartItem';
-import { PaymentSection } from '../components/PaymentSection';
+import { BLUETOOTH_SERVICE_UUID, BLUETOOTH_CHARACTERISTIC_UUID, STORE_INFO } from '../utils/constants';
 import { formatCurrency } from '../utils/formatCurrency';
-import { handleError } from '../utils/errorHandler';
 
+export class BluetoothPrinterService {
+  constructor() {
+    this.device = null;
+    this.characteristic = null;
+    this.lastDeviceId = null;
+  }
 
-export function CashierPage({ printerService, printerConnected, onShowToast }) {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [paid, setPaid] = useState('');
-  const [shippingCost, setShippingCost] = useState(0);
-  const [loading, setLoading] = useState(false);
+  isSupported() {
+    return 'bluetooth' in navigator;
+  }
 
-  const loadProducts = async () => {
+  async connect() {
     try {
-      const data = await productService.getActive();
-      setProducts(data);
+      this.device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [BLUETOOTH_SERVICE_UUID] }],
+        optionalServices: [BLUETOOTH_SERVICE_UUID]
+      });
+
+      const server = await this.device.gatt.connect();
+      const service = await server.getPrimaryService(BLUETOOTH_SERVICE_UUID);
+      this.characteristic = await service.getCharacteristic(BLUETOOTH_CHARACTERISTIC_UUID);
+
+      this.lastDeviceId = this.device.id;
+      return true;
     } catch (error) {
-      handleError(error, 'Gagal memuat produk', onShowToast);
+      console.error('Bluetooth connection failed:', error);
+      return false;
     }
-  };
+  }
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  async autoConnect() {
+    if (!this.lastDeviceId || !this.isSupported()) return false;
 
-
-  const addToCart = (product) => {
-    const existing = cart.find(item => item.id === product.id);
-    if (existing) {
-      setCart(cart.map(item => 
-        item.id === product.id 
-          ? { ...item, qty: item.qty + 1 }
-          : item
-      ));
-    } else {
-      setCart([...cart, { ...product, qty: 1 }]);
-    }
-  };
-
-  const updateQty = (id, delta) => {
-    setCart(cart.map(item => {
-      if (item.id === id) {
-        const newQty = item.qty + delta;
-        return newQty > 0 ? { ...item, qty: newQty } : item;
+    try {
+      const devices = await navigator.bluetooth.getDevices();
+      this.device = devices.find(d => d.id === this.lastDeviceId);
+      
+      if (this.device) {
+        const server = await this.device.gatt.connect();
+        const service = await server.getPrimaryService(BLUETOOTH_SERVICE_UUID);
+        this.characteristic = await service.getCharacteristic(BLUETOOTH_CHARACTERISTIC_UUID);
+        return true;
       }
-      return item;
-    }).filter(item => item.qty > 0));
-  };
+    } catch (error) {
+      console.error('Auto-connect failed:', error);
+    }
+    return false;
+  }
 
-  const removeItem = (id) => {
-    setCart(cart.filter(item => item.id !== id));
-  };
-
-  const calculateSubtotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  };
-
-    const calculateGrandTotal = () => {
-        const subtotal = calculateSubtotal();
-        const shipping = Number(shippingCost) || 0;
-        return subtotal + shipping;
+  getESCPOS() {
+    return {
+      INIT: [0x1B, 0x40],
+      ALIGN_CENTER: [0x1B, 0x61, 0x01],
+      ALIGN_LEFT: [0x1B, 0x61, 0x00],
+      ALIGN_RIGHT: [0x1B, 0x61, 0x02],
+      BOLD_ON: [0x1B, 0x45, 0x01],
+      BOLD_OFF: [0x1B, 0x45, 0x00],
+      TEXT_NORMAL: [0x1D, 0x21, 0x00],
+      TEXT_2X_HEIGHT: [0x1D, 0x21, 0x01],
+      TEXT_2X_WIDTH: [0x1D, 0x21, 0x10],
+      TEXT_2X: [0x1D, 0x21, 0x11],
+      LINE_FEED: [0x0A],
+      CUT_PAPER: [0x1D, 0x56, 0x00],
     };
+  }
 
+  textToBytes(text) {
+    const encoder = new TextEncoder();
+    return Array.from(encoder.encode(text));
+  }
 
-    const processPayment = async () => {
-        const subtotal = calculateSubtotal();
-        const grandTotal = calculateGrandTotal();
-        const paidAmount = parseInt(paid) || 0;
-
-        if (paidAmount < grandTotal) {
-            onShowToast('Uang bayar kurang!', 'error');
-            return;
+  // Helper untuk format currency yang kompatibel dengan printer thermal
+  cleanCurrency(value) {
+    try {
+      const numValue = Number(value);
+      if (isNaN(numValue)) return 'Rp0';
+      
+      // Format manual tanpa locale
+      const absValue = Math.abs(numValue);
+      const strValue = String(Math.floor(absValue));
+      
+      // Tambahkan separator ribuan manual
+      let formatted = '';
+      let count = 0;
+      for (let i = strValue.length - 1; i >= 0; i--) {
+        if (count === 3) {
+          formatted = '.' + formatted;
+          count = 0;
         }
+        formatted = strValue[i] + formatted;
+        count++;
+      }
+      
+      return 'Rp' + formatted;
+    } catch (e) {
+      return 'Rp0';
+    }
+  }
 
-        const change = paidAmount - grandTotal;
+  createLine(char = '-', length = 32) {
+    return char.repeat(length);
+  }
 
-        if (
-            isNaN(subtotal) ||
-            isNaN(grandTotal) ||
-            isNaN(paidAmount) ||
-            isNaN(change)
-            ) {
-            onShowToast('Data pembayaran tidak valid', 'error');
-            return;
+  async print(data) {
+    if (!this.characteristic) {
+      throw new Error('Printer not connected');
+    }
+
+    const cmd = this.getESCPOS();
+    let bytes = [];
+
+    try {
+      // Initialize
+      bytes.push(...cmd.INIT);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Header - Store Name
+      bytes.push(...cmd.ALIGN_CENTER);
+      bytes.push(...cmd.TEXT_2X);
+      bytes.push(...cmd.BOLD_ON);
+      bytes.push(...this.textToBytes(STORE_INFO.name));
+      bytes.push(...cmd.LINE_FEED);
+      
+      // Store Address
+      bytes.push(...cmd.TEXT_NORMAL);
+      bytes.push(...cmd.BOLD_OFF);
+      bytes.push(...this.textToBytes(STORE_INFO.address));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...this.textToBytes('Magelang'));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.LINE_FEED);
+
+      // Transaction Info
+      bytes.push(...cmd.ALIGN_LEFT);
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
+      bytes.push(...cmd.LINE_FEED);
+      
+      bytes.push(...this.textToBytes('No: ' + data.transactionNo));
+      bytes.push(...cmd.LINE_FEED);
+      
+      const dateStr = new Date().toLocaleString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      bytes.push(...this.textToBytes(dateStr));
+      bytes.push(...cmd.LINE_FEED);
+      
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
+      bytes.push(...cmd.LINE_FEED);
+
+      // Items Header
+      bytes.push(...this.textToBytes('Item                Qty   Harga'));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
+      bytes.push(...cmd.LINE_FEED);
+
+      // Items - Simplified tanpa terlalu banyak log
+      if (data.items && Array.isArray(data.items)) {
+        for (let idx = 0; idx < data.items.length; idx++) {
+          const item = data.items[idx];
+          
+          // Nama item - print langsung
+          let itemName = item.name ? String(item.name) : ('Item ' + (idx + 1));
+          if (itemName.length > 32) {
+            itemName = itemName.substring(0, 29) + '...';
+          }
+          
+          bytes.push(...this.textToBytes(itemName));
+          bytes.push(...cmd.LINE_FEED);
+          
+          // Qty dan Price
+          const qty = parseInt(item.qty) || 1;
+          const price = parseFloat(item.price) || 0;
+          const totalPrice = qty * price;
+          
+          // Format line: "  2                    Rp58.000"
+          const qtyPart = '  ' + String(qty);
+          const pricePart = this.cleanCurrency(totalPrice);
+          
+          // Total width = 32
+          // qtyPart di kiri, pricePart di kanan
+          const spacesCount = 32 - qtyPart.length - pricePart.length;
+          const spaces = spacesCount > 0 ? ' '.repeat(spacesCount) : ' ';
+          
+          const fullLine = qtyPart + spaces + pricePart;
+          
+          bytes.push(...this.textToBytes(fullLine));
+          bytes.push(...cmd.LINE_FEED);
         }
+      }
 
-        console.log({
-        subtotal,
-        shippingCost,
-        grandTotal,
-        paidAmount,
-        change
-        });
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
+      bytes.push(...cmd.LINE_FEED);
 
-        // const transactionNo = `TRX${Date.now()}`;
+      // Subtotal
+      const subtotal = parseFloat(data.subtotal) || 0;
+      const subtotalStr = this.cleanCurrency(subtotal);
+      const subtotalLabel = 'Subtotal:';
+      const subtotalSpace = 32 - subtotalLabel.length - subtotalStr.length;
+      const subtotalLine = subtotalLabel + ' '.repeat(subtotalSpace > 0 ? subtotalSpace : 1) + subtotalStr;
+      bytes.push(...this.textToBytes(subtotalLine));
+      bytes.push(...cmd.LINE_FEED);
 
-        setLoading(true);
+      // Shipping Cost
+      const shipping = parseFloat(data.shippingCost) || 0;
+      if (shipping > 0) {
+        const shippingStr = this.cleanCurrency(shipping);
+        const shippingLabel = 'Ongkir:';
+        const shippingSpace = 32 - shippingLabel.length - shippingStr.length;
+        const shippingLine = shippingLabel + ' '.repeat(shippingSpace > 0 ? shippingSpace : 1) + shippingStr;
+        bytes.push(...this.textToBytes(shippingLine));
+        bytes.push(...cmd.LINE_FEED);
+      }
 
-        try {
-            // ✅ SIMPAN TRANSAKSI (HEADER)
-            const trx = await transactionService.create({
-                total: subtotal,
-                shipping_cost: shippingCost,
-                grand_total: grandTotal,
-                paid: paidAmount,
-                change,
-                items: cart
-            });
+      bytes.push(...this.textToBytes(this.createLine('=', 32)));
+      bytes.push(...cmd.LINE_FEED);
 
-            // const transactionId = trx.id; // ✅ AMAN SEKARANG
+      // Grand Total
+      bytes.push(...cmd.BOLD_ON);
+      const grandTotal = parseFloat(data.grandTotal) || 0;
+      const totalStr = this.cleanCurrency(grandTotal);
+      const totalLabel = 'TOTAL:';
+      const totalSpace = 32 - totalLabel.length - totalStr.length;
+      const totalLine = totalLabel + ' '.repeat(totalSpace > 0 ? totalSpace : 1) + totalStr;
+      bytes.push(...this.textToBytes(totalLine));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.BOLD_OFF);
 
+      bytes.push(...this.textToBytes(this.createLine('=', 32)));
+      bytes.push(...cmd.LINE_FEED);
 
-            // ✅ SIMPAN ITEM TRANSAKSI
-            // await transactionService.createItems(
-            // cart.map(item => ({
-            //     transaction_id: transactionId, // ⬅️ FIX
-            //     product_name: item.name,
-            //     price: item.price,
-            //     qty: item.qty,
-            //     subtotal: item.price * item.qty
-            // }))
-            // );
+      // Payment Info - Fix field names
+      const paid = parseFloat(data.paid || data.paidAmount) || 0;
+      const change = parseFloat(data.change) || 0;
+      
+      const paidStr = this.cleanCurrency(paid);
+      const paidLabel = 'BAYAR:';
+      const paidSpaces = 32 - paidLabel.length - paidStr.length;
+      const paidLine = paidLabel + ' '.repeat(paidSpaces > 0 ? paidSpaces : 1) + paidStr;
+      
+      bytes.push(...this.textToBytes(paidLine));
+      bytes.push(...cmd.LINE_FEED);
 
-            // PRINT DATA
-            const printData = {
-            transactionNo: trx.transaction_no,
-            items: cart,
-            subtotal,
-            shippingCost,
-            grandTotal,
-            paid: paidAmount,
-            change
-            };
+      const changeStr = this.cleanCurrency(change);
+      const changeLabel = 'KEMBALI:';
+      const changeSpaces = 32 - changeLabel.length - changeStr.length;
+      const changeLine = changeLabel + ' '.repeat(changeSpaces > 0 ? changeSpaces : 1) + changeStr;
+      
+      bytes.push(...this.textToBytes(changeLine));
+      bytes.push(...cmd.LINE_FEED);
 
-            let printed = false;
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.LINE_FEED);
 
-            if (printerConnected) {
-            try {
-              console.log('Print Data:', printData);
-              alert(JSON.stringify(printData, null, 2));
-                await printerService.print(printData);
-                printed = true;
-            } catch {
-                console.warn('Bluetooth print failed, fallback');
-            }
-            }
+      // Footer
+      bytes.push(...cmd.ALIGN_CENTER);
+      
+      // Phone number
+      bytes.push(...this.textToBytes(STORE_INFO.phone));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.LINE_FEED);
+      
+      bytes.push(...this.textToBytes('We love to hear your feedback'));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...this.textToBytes('(the sweet and the bitter one)'));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.LINE_FEED);
 
-            if (!printed) {
-            printFallback(printData);
-            }
+      bytes.push(...cmd.BOLD_ON);
+      bytes.push(...this.textToBytes('Thank you!'));
+      bytes.push(...cmd.BOLD_OFF);
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.LINE_FEED);
 
-            // RESET
-            setCart([]);
-            setPaid('');
-            setShippingCost(0);
+      // Cut paper
+      bytes.push(...cmd.CUT_PAPER);
 
-            onShowToast(
-            `Pembayaran berhasil! Kembalian: ${formatCurrency(change)}`,
-            'success'
-            );
-        } catch (error) {
-            handleError(error, 'Gagal memproses transaksi', onShowToast);
-        } finally {
-            setLoading(false);
-        }
-    };
+      // Send to printer
+      const chunkSize = 256;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.slice(i, i + chunkSize);
+        await this.characteristic.writeValue(new Uint8Array(chunk));
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
 
-  const printFallback = (data) => {
-    const printWindow = window.open('', '', 'width=300,height=600');
-    const itemsHtml = data.items.map(item => `
-      <tr>
-        <td>${item.name}</td>
-        <td align="right">${item.qty}x</td>
-        <td align="right">${formatCurrency(item.price * item.qty)}</td>
-      </tr>
-    `).join('');
+      return true;
+    } catch (error) {
+      console.error('Print failed:', error);
+      throw new Error(`Print failed: ${error.message}`);
+    }
+  }
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Nota - ${data.transactionNo}</title>
-          <style>
-            body { font-family: monospace; font-size: 12px; margin: 20px; }
-            .center { text-align: center; }
-            .bold { font-weight: bold; }
-            .line { border-top: 1px dashed #000; margin: 10px 0; }
-            table { width: 100%; }
-          </style>
-        </head>
-        <body>
-          <div class="center bold" style="font-size: 16px;">BAKE BLISS</div>
-          <div class="center">Jl. Ahmad Yani No. 24A</div>
-          <div class="center">Magelang</div>
-          <div class="line"></div>
-          <div>No: ${data.transactionNo}</div>
-          <div>${new Date().toLocaleString('id-ID')}</div>
-          <div class="line"></div>
-          <table>${itemsHtml}</table>
-          <div class="line"></div>
-          <table>
-            <tr>
-              <td>Subtotal:</td>
-              <td align="right">${formatCurrency(data.subtotal)}</td>
-            </tr>
-            ${data.shippingCost > 0 ? `
-            <tr>
-              <td>Ongkir:</td>
-              <td align="right">${formatCurrency(data.shippingCost)}</td>
-            </tr>
-            ` : ''}
-            <tr class="bold">
-              <td>TOTAL:</td>
-              <td align="right">${formatCurrency(data.grandTotal)}</td>
-            </tr>
-            <tr>
-              <td>BAYAR:</td>
-              <td align="right">${formatCurrency(data.paid)}</td>
-            </tr>
-            <tr>
-              <td>KEMBALI:</td>
-              <td align="right">${formatCurrency(data.change)}</td>
-            </tr>
-          </table>
-          <div class="line"></div>
-          <div class="center">0881-0124-64949</div>
-          <div class="center">We love to hear your feedback (the sweet and the bitter one😋)</div>
-          <br>
-          <div class="center">Thank you!</div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
+  disconnect() {
+    if (this.device && this.device.gatt.connected) {
+      this.device.gatt.disconnect();
+    }
+    this.device = null;
+    this.characteristic = null;
+  }
 
-  const subtotal = calculateSubtotal();
-  const grandTotal = calculateGrandTotal();
-  const paidAmount = parseInt(paid) || 0;
-  const change = paidAmount >= grandTotal ? paidAmount - grandTotal : 0;
-
-  return (
-    <>
-      {/* Products Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        {products.map(product => (
-          <button
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  className="
-                    bg-white dark:bg-gray-800
-                    text-gray-900 dark:text-white
-                    p-4 rounded-lg
-                    hover:bg-gray-100 dark:hover:bg-gray-700
-                    active:bg-gray-200 dark:active:bg-gray-600
-                    transition-colors
-                    border border-gray-200 dark:border-gray-700
-                  "
-                >
-              <div className="font-semibold text-sm mb-1">
-                {product.name}
-              </div>
-              <div className="text-blue-600 dark:text-blue-400 text-xs">
-                {formatCurrency(product.price)}
-              </div>
-          </button>
-
-        ))}
-      </div>
-
-      {/* Cart */}
-      <div className="
-          bg-white dark:bg-gray-800
-          rounded-lg p-4 mb-4
-          border border-gray-200 dark:border-gray-700
-        ">
-        <h2 className="font-bold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
-          <ShoppingCart size={18} />
-          Keranjang ({cart.length})
-        </h2>
-        
-        {cart.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">Belum ada item</p>
-        ) : (
-          <div className="space-y-2">
-            {cart.map(item => (
-              <CartItem
-                key={item.id}
-                item={item}
-                onUpdateQty={updateQty}
-                onRemove={removeItem}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Payment */}
-      {cart.length > 0 && (
-        <PaymentSection
-          subtotal={subtotal}
-          shippingCost={shippingCost}
-          onShippingCostChange={setShippingCost}
-          grandTotal={grandTotal}
-          paid={paid}
-          onPaidChange={setPaid}
-          change={change}
-          onPayment={processPayment}
-          loading={loading}
-        />
-      )}
-    </>
-  );
+  isConnected() {
+    return this.device && this.device.gatt.connected;
+  }
 }
