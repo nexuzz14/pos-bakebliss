@@ -74,12 +74,30 @@ export class BluetoothPrinterService {
 
   // Helper untuk format currency yang kompatibel dengan printer thermal
   cleanCurrency(value) {
-    const numValue = Number(value);
-    const formatted = numValue.toLocaleString('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
-    return 'Rp' + formatted;
+    try {
+      const numValue = Number(value);
+      if (isNaN(numValue)) return 'Rp0';
+      
+      // Format manual tanpa locale
+      const absValue = Math.abs(numValue);
+      const strValue = String(Math.floor(absValue));
+      
+      // Tambahkan separator ribuan manual
+      let formatted = '';
+      let count = 0;
+      for (let i = strValue.length - 1; i >= 0; i--) {
+        if (count === 3) {
+          formatted = '.' + formatted;
+          count = 0;
+        }
+        formatted = strValue[i] + formatted;
+        count++;
+      }
+      
+      return 'Rp' + formatted;
+    } catch (e) {
+      return 'Rp0';
+    }
   }
 
   createLine(char = '-', length = 32) {
@@ -143,21 +161,16 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Items - Debug version dengan logging detail
+      // Items - Simplified tanpa terlalu banyak log
       if (data.items && Array.isArray(data.items)) {
-        console.log('Total items:', data.items.length);
-        
         for (let idx = 0; idx < data.items.length; idx++) {
           const item = data.items[idx];
-          console.log('=== Processing Item', idx, '===');
-          console.log('Item object:', JSON.stringify(item));
           
-          // Nama item
+          // Nama item - print langsung
           let itemName = item.name ? String(item.name) : ('Item ' + (idx + 1));
           if (itemName.length > 32) {
             itemName = itemName.substring(0, 29) + '...';
           }
-          console.log('Item name to print:', itemName);
           
           bytes.push(...this.textToBytes(itemName));
           bytes.push(...cmd.LINE_FEED);
@@ -165,28 +178,20 @@ export class BluetoothPrinterService {
           // Qty dan Price
           const qty = parseInt(item.qty) || 1;
           const price = parseFloat(item.price) || 0;
-          const total = qty * price;
+          const totalPrice = qty * price;
           
-          console.log('Qty:', qty, 'Price:', price, 'Total:', total);
+          // Format line: "  2                    Rp58.000"
+          const qtyPart = '  ' + String(qty);
+          const pricePart = this.cleanCurrency(totalPrice);
           
-          // Format qty dan harga
-          const qtyText = '  ' + String(qty);
-          const priceText = this.cleanCurrency(total);
+          // Total width = 32
+          // qtyPart di kiri, pricePart di kanan
+          const spacesCount = 32 - qtyPart.length - pricePart.length;
+          const spaces = spacesCount > 0 ? ' '.repeat(spacesCount) : ' ';
           
-          console.log('Qty text:', qtyText);
-          console.log('Price text:', priceText);
-          console.log('Qty length:', qtyText.length, 'Price length:', priceText.length);
+          const fullLine = qtyPart + spaces + pricePart;
           
-          const neededSpace = 32 - qtyText.length - priceText.length;
-          console.log('Space needed:', neededSpace);
-          
-          const spacer = neededSpace > 0 ? ' '.repeat(neededSpace) : ' ';
-          const qtyPriceLine = qtyText + spacer + priceText;
-          
-          console.log('Final line:', qtyPriceLine);
-          console.log('Final line length:', qtyPriceLine.length);
-          
-          bytes.push(...this.textToBytes(qtyPriceLine));
+          bytes.push(...this.textToBytes(fullLine));
           bytes.push(...cmd.LINE_FEED);
         }
       }
@@ -231,42 +236,22 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Payment Info - Debug version
+      // Payment Info - Simplified
       const paid = parseFloat(data.paid) || 0;
       const change = parseFloat(data.change) || 0;
       
-      console.log('=== PAYMENT INFO ===');
-      console.log('Paid value:', paid);
-      console.log('Change value:', change);
-      
       const paidStr = this.cleanCurrency(paid);
-      console.log('Paid formatted:', paidStr);
-      
       const paidLabel = 'BAYAR:';
-      const paidSpace = 32 - paidLabel.length - paidStr.length;
-      console.log('Paid space:', paidSpace);
-      
-      const paidSpacer = paidSpace > 0 ? ' '.repeat(paidSpace) : ' ';
-      const paidLine = paidLabel + paidSpacer + paidStr;
-      
-      console.log('Paid line:', paidLine);
-      console.log('Paid line length:', paidLine.length);
+      const paidSpaces = 32 - paidLabel.length - paidStr.length;
+      const paidLine = paidLabel + ' '.repeat(paidSpaces > 0 ? paidSpaces : 1) + paidStr;
       
       bytes.push(...this.textToBytes(paidLine));
       bytes.push(...cmd.LINE_FEED);
 
       const changeStr = this.cleanCurrency(change);
-      console.log('Change formatted:', changeStr);
-      
       const changeLabel = 'KEMBALI:';
-      const changeSpace = 32 - changeLabel.length - changeStr.length;
-      console.log('Change space:', changeSpace);
-      
-      const changeSpacer = changeSpace > 0 ? ' '.repeat(changeSpace) : ' ';
-      const changeLine = changeLabel + changeSpacer + changeStr;
-      
-      console.log('Change line:', changeLine);
-      console.log('Change line length:', changeLine.length);
+      const changeSpaces = 32 - changeLabel.length - changeStr.length;
+      const changeLine = changeLabel + ' '.repeat(changeSpaces > 0 ? changeSpaces : 1) + changeStr;
       
       bytes.push(...this.textToBytes(changeLine));
       bytes.push(...cmd.LINE_FEED);
