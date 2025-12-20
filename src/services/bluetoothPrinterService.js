@@ -5,7 +5,7 @@ export class BluetoothPrinterService {
   constructor() {
     this.device = null;
     this.characteristic = null;
-    this.lastDeviceId = null; // Store in memory instead of localStorage
+    this.lastDeviceId = null;
   }
 
   isSupported() {
@@ -23,7 +23,6 @@ export class BluetoothPrinterService {
       const service = await server.getPrimaryService(BLUETOOTH_SERVICE_UUID);
       this.characteristic = await service.getCharacteristic(BLUETOOTH_CHARACTERISTIC_UUID);
 
-      // Store device ID in memory
       this.lastDeviceId = this.device.id;
       return true;
     } catch (error) {
@@ -53,32 +52,18 @@ export class BluetoothPrinterService {
 
   getESCPOS() {
     return {
-      // Initialization & Control
-      INIT: [0x1B, 0x40],                    // Initialize printer
-      
-      // Text Alignment
-      ALIGN_CENTER: [0x1B, 0x61, 0x01],      // Center alignment
-      ALIGN_LEFT: [0x1B, 0x61, 0x00],        // Left alignment
-      ALIGN_RIGHT: [0x1B, 0x61, 0x02],       // Right alignment
-      
-      // Text Style
-      BOLD_ON: [0x1B, 0x45, 0x01],           // Bold on
-      BOLD_OFF: [0x1B, 0x45, 0x00],          // Bold off
-      
-      // Text Size (RPP02N compatible)
-      TEXT_NORMAL: [0x1D, 0x21, 0x00],       // Normal size
-      TEXT_2X_HEIGHT: [0x1D, 0x21, 0x01],    // 2x height
-      TEXT_2X_WIDTH: [0x1D, 0x21, 0x10],     // 2x width
-      TEXT_2X: [0x1D, 0x21, 0x11],           // 2x width & height
-      
-      // Line & Paper
-      LINE_FEED: [0x0A],                     // Line feed
-      PAPER_FEED: [0x1B, 0x64, 0x02],        // Feed paper 2 lines
-      CUT_PAPER: [0x1D, 0x56, 0x00],         // Full cut
-      PARTIAL_CUT: [0x1D, 0x56, 0x01],       // Partial cut
-      
-      // Character spacing (better for RPP02N)
-      CHAR_SPACING_DEFAULT: [0x1B, 0x20, 0x00]
+      INIT: [0x1B, 0x40],
+      ALIGN_CENTER: [0x1B, 0x61, 0x01],
+      ALIGN_LEFT: [0x1B, 0x61, 0x00],
+      ALIGN_RIGHT: [0x1B, 0x61, 0x02],
+      BOLD_ON: [0x1B, 0x45, 0x01],
+      BOLD_OFF: [0x1B, 0x45, 0x00],
+      TEXT_NORMAL: [0x1D, 0x21, 0x00],
+      TEXT_2X_HEIGHT: [0x1D, 0x21, 0x01],
+      TEXT_2X_WIDTH: [0x1D, 0x21, 0x10],
+      TEXT_2X: [0x1D, 0x21, 0x11],
+      LINE_FEED: [0x0A],
+      CUT_PAPER: [0x1D, 0x56, 0x00],
     };
   }
 
@@ -87,9 +72,20 @@ export class BluetoothPrinterService {
     return Array.from(encoder.encode(text));
   }
 
-  // Helper to create separator line
-  createSeparator(char = '-', length = 32) {
+  // Helper untuk membuat line dengan panjang yang tepat
+  createLine(char = '-', length = 32) {
     return char.repeat(length);
+  }
+
+  // Helper untuk format line dengan label dan value rata kanan
+  formatLineRightAlign(label, value, totalWidth = 32) {
+    const spaces = totalWidth - label.length - value.length;
+    if (spaces < 1) {
+      // Jika tidak muat, potong label
+      const maxLabelLength = totalWidth - value.length - 1;
+      return label.substring(0, maxLabelLength) + ' ' + value;
+    }
+    return label + ' '.repeat(spaces) + value;
   }
 
   async print(data) {
@@ -101,7 +97,7 @@ export class BluetoothPrinterService {
     let bytes = [];
 
     try {
-      // Initialize printer
+      // Initialize
       bytes.push(...cmd.INIT);
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -112,103 +108,115 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(STORE_INFO.name));
       bytes.push(...cmd.LINE_FEED);
       
-      // Store Info
+      // Store Address
       bytes.push(...cmd.TEXT_NORMAL);
       bytes.push(...cmd.BOLD_OFF);
       bytes.push(...this.textToBytes(STORE_INFO.address));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...this.textToBytes('Magelang'));
       bytes.push(...cmd.LINE_FEED);
-      bytes.push(...this.textToBytes(STORE_INFO.phone));
-      bytes.push(...cmd.LINE_FEED);
       bytes.push(...cmd.LINE_FEED);
 
       // Transaction Info
       bytes.push(...cmd.ALIGN_LEFT);
-      bytes.push(...this.textToBytes(this.createSeparator('-', 32)));
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
+      
       bytes.push(...this.textToBytes(`No: ${data.transactionNo}`));
       bytes.push(...cmd.LINE_FEED);
-      bytes.push(...this.textToBytes(new Date().toLocaleString('id-ID')));
+      
+      const dateStr = new Date().toLocaleString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      bytes.push(...this.textToBytes(dateStr));
       bytes.push(...cmd.LINE_FEED);
-      bytes.push(...this.textToBytes(this.createSeparator('-', 32)));
+      
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
       // Items Header
-      bytes.push(...this.textToBytes('Item                Qty   Harga'));
+      bytes.push(...this.textToBytes('Item            Qty       Harga'));
       bytes.push(...cmd.LINE_FEED);
-      bytes.push(...this.textToBytes(this.createSeparator('-', 32)));
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
       // Items
       data.items.forEach(item => {
-        // Item name (truncate if too long)
-        const itemName = item.name.length > 20 ? 
-          item.name.substring(0, 17) + '...' : 
-          item.name.padEnd(20, ' ');
+        const maxNameLength = 16;
+        let itemName = item.name;
+        if (itemName.length > maxNameLength) {
+          itemName = itemName.substring(0, maxNameLength - 2) + '..';
+        }
         
-        const qty = String(item.qty).padStart(3, ' ');
-        const price = formatCurrency(item.price * item.qty).padStart(9, ' ');
+        const qtyStr = String(item.qty);
+        const priceValue = item.price * item.qty;
+        const priceStr = formatCurrency(priceValue);
         
-        bytes.push(...this.textToBytes(`${itemName}${qty}${price}`));
+        // Format: nama (16 char) + qty (center in 4 char) + harga (right align in remaining space)
+        const nameSection = itemName.padEnd(16, ' ');
+        const qtySection = qtyStr.padStart(3, ' ') + ' ';
+        const priceSection = priceStr.padStart(12, ' ');
+        
+        bytes.push(...this.textToBytes(nameSection + qtySection + priceSection));
         bytes.push(...cmd.LINE_FEED);
       });
 
-      bytes.push(...this.textToBytes(this.createSeparator('-', 32)));
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
       // Subtotal
-      const subtotalLabel = 'Subtotal:';
-      const subtotalValue = formatCurrency(data.subtotal);
-      const subtotalSpaces = ' '.repeat(32 - subtotalLabel.length - subtotalValue.length);
-      bytes.push(...this.textToBytes(`${subtotalLabel}${subtotalSpaces}${subtotalValue}`));
+      const subtotalLine = this.formatLineRightAlign('Subtotal:', formatCurrency(data.subtotal));
+      bytes.push(...this.textToBytes(subtotalLine));
       bytes.push(...cmd.LINE_FEED);
 
       // Shipping Cost
       if (data.shippingCost > 0) {
-        const shippingLabel = 'Ongkir:';
-        const shippingValue = formatCurrency(data.shippingCost);
-        const shippingSpaces = ' '.repeat(32 - shippingLabel.length - shippingValue.length);
-        bytes.push(...this.textToBytes(`${shippingLabel}${shippingSpaces}${shippingValue}`));
+        const shippingLine = this.formatLineRightAlign('Ongkir:', formatCurrency(data.shippingCost));
+        bytes.push(...this.textToBytes(shippingLine));
         bytes.push(...cmd.LINE_FEED);
       }
 
-      bytes.push(...this.textToBytes(this.createSeparator('=', 32)));
+      bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Grand Total
+      // Grand Total (Bold & Larger)
       bytes.push(...cmd.BOLD_ON);
       bytes.push(...cmd.TEXT_2X_HEIGHT);
-      const totalLabel = 'TOTAL:';
-      const totalValue = formatCurrency(data.grandTotal);
-      const totalSpaces = ' '.repeat(32 - totalLabel.length - totalValue.length);
-      bytes.push(...this.textToBytes(`${totalLabel}${totalSpaces}${totalValue}`));
+      const totalLine = this.formatLineRightAlign('TOTAL:', formatCurrency(data.grandTotal));
+      bytes.push(...this.textToBytes(totalLine));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...cmd.TEXT_NORMAL);
       bytes.push(...cmd.BOLD_OFF);
 
-      bytes.push(...this.textToBytes(this.createSeparator('=', 32)));
+      bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
       // Payment Info
-      const paidLabel = 'BAYAR:';
-      const paidValue = formatCurrency(data.paid);
-      const paidSpaces = ' '.repeat(32 - paidLabel.length - paidValue.length);
-      bytes.push(...this.textToBytes(`${paidLabel}${paidSpaces}${paidValue}`));
+      const paidLine = this.formatLineRightAlign('BAYAR:', formatCurrency(data.paid));
+      bytes.push(...this.textToBytes(paidLine));
       bytes.push(...cmd.LINE_FEED);
 
-      const changeLabel = 'KEMBALI:';
-      const changeValue = formatCurrency(data.change);
-      const changeSpaces = ' '.repeat(32 - changeLabel.length - changeValue.length);
-      bytes.push(...this.textToBytes(`${changeLabel}${changeSpaces}${changeValue}`));
+      const changeLine = this.formatLineRightAlign('KEMBALI:', formatCurrency(data.change));
+      bytes.push(...this.textToBytes(changeLine));
       bytes.push(...cmd.LINE_FEED);
 
-      bytes.push(...this.textToBytes(this.createSeparator('-', 32)));
+      bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...cmd.LINE_FEED);
 
       // Footer
       bytes.push(...cmd.ALIGN_CENTER);
+      
+      // Phone number (added here, above feedback)
+      bytes.push(...this.textToBytes(STORE_INFO.phone));
+      bytes.push(...cmd.LINE_FEED);
+      bytes.push(...cmd.LINE_FEED);
+      
       bytes.push(...this.textToBytes('We love to hear your feedback'));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...this.textToBytes('(the sweet and the bitter one)'));
@@ -225,12 +233,11 @@ export class BluetoothPrinterService {
       // Cut paper
       bytes.push(...cmd.CUT_PAPER);
 
-      // Send to printer in chunks (RPP02N works better with smaller chunks)
-      const chunkSize = 256; // Smaller chunk size for better compatibility
+      // Send to printer
+      const chunkSize = 256;
       for (let i = 0; i < bytes.length; i += chunkSize) {
         const chunk = bytes.slice(i, i + chunkSize);
         await this.characteristic.writeValue(new Uint8Array(chunk));
-        // Longer delay for RPP02N stability
         await new Promise(resolve => setTimeout(resolve, 150));
       }
 
