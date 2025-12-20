@@ -311,3 +311,4 @@ export class BluetoothPrinterService {
     return this.device && this.device.gatt.connected;
   }
 }
+//
