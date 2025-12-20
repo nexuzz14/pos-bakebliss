@@ -236,8 +236,8 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Payment Info - Simplified
-      const paid = parseFloat(data.paid) || 0;
+      // Payment Info - Fix field names
+      const paid = parseFloat(data.paid || data.paidAmount) || 0;
       const change = parseFloat(data.change) || 0;
       
       const paidStr = this.cleanCurrency(paid);
