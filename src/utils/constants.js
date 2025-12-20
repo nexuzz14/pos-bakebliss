@@ -1,7 +1,7 @@
 export const STORE_INFO = {
-  name: 'TOKO KUE MANIS',
-  address: 'Jl. Manis No. 123',
-  phone: '0812-3456-7890'
+  name: 'BAKE BLISS',
+  address: 'Jl. Ahmad Yani No. 24A',
+  phone: '0881-0124-64949'
 };
 
 export const TOAST_DURATION = 3000;

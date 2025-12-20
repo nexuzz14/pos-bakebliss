@@ -89,7 +89,7 @@ export class BluetoothPrinterService {
     bytes.push(...cmd.BOLD_OFF);
     bytes.push(...this.textToBytes(STORE_INFO.address));
     bytes.push(...cmd.LINE_FEED);
-    bytes.push(...this.textToBytes(`Telp: ${STORE_INFO.phone}`));
+    bytes.push(...this.textToBytes('Magelang'));
     bytes.push(...cmd.LINE_FEED);
     bytes.push(...cmd.LINE_FEED);
 
@@ -150,10 +150,24 @@ export class BluetoothPrinterService {
 
     // Footer
     bytes.push(...cmd.ALIGN_CENTER);
-    bytes.push(...this.textToBytes('Terima kasih'));
+
+    bytes.push(...this.textToBytes('0881-0124-64949'));
     bytes.push(...cmd.LINE_FEED);
-    bytes.push(...this.textToBytes('Selamat menikmati 🍰'));
+
+    bytes.push(
+      ...this.textToBytes(
+        'We love to hear your feedback (the sweet and the bitter one 😋)'
+      )
+    );
     bytes.push(...cmd.LINE_FEED);
+
+    // 🔹 spasi kosong (setara <br>)
+    bytes.push(...cmd.LINE_FEED);
+
+    bytes.push(...this.textToBytes('Thank you!'));
+    bytes.push(...cmd.LINE_FEED);
+
+    // extra feed biar nota rapi sebelum cut
     bytes.push(...cmd.LINE_FEED);
     bytes.push(...cmd.LINE_FEED);
 
