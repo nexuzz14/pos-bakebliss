@@ -143,45 +143,49 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Items - Print satu per satu dengan jeda
+      // Items - Debug version dengan logging detail
       if (data.items && Array.isArray(data.items)) {
+        console.log('Total items:', data.items.length);
+        
         for (let idx = 0; idx < data.items.length; idx++) {
           const item = data.items[idx];
+          console.log('=== Processing Item', idx, '===');
+          console.log('Item object:', JSON.stringify(item));
           
-          // Debug log
-          console.log('Item', idx, ':', item);
-          
-          // Nama item - PASTIKAN ini dulu
-          let itemName = '';
-          if (item.name) {
-            itemName = String(item.name);
-          } else {
-            itemName = 'Item ' + (idx + 1);
-          }
-          
+          // Nama item
+          let itemName = item.name ? String(item.name) : ('Item ' + (idx + 1));
           if (itemName.length > 32) {
             itemName = itemName.substring(0, 29) + '...';
           }
+          console.log('Item name to print:', itemName);
           
-          // Print nama item
-          const nameBytes = this.textToBytes(itemName);
-          bytes.push(...nameBytes);
+          bytes.push(...this.textToBytes(itemName));
           bytes.push(...cmd.LINE_FEED);
           
-          // Qty dan Harga di baris berikutnya
+          // Qty dan Price
           const qty = parseInt(item.qty) || 1;
           const price = parseFloat(item.price) || 0;
           const total = qty * price;
           
-          const qtyStr = '  ' + String(qty);
-          const priceStr = this.cleanCurrency(total);
+          console.log('Qty:', qty, 'Price:', price, 'Total:', total);
           
-          // Hitung spasi
-          const totalLength = qtyStr.length + priceStr.length;
-          const spacesNeeded = 32 - totalLength;
-          const spaces = spacesNeeded > 0 ? ' '.repeat(spacesNeeded) : ' ';
+          // Format qty dan harga
+          const qtyText = '  ' + String(qty);
+          const priceText = this.cleanCurrency(total);
           
-          const qtyPriceLine = qtyStr + spaces + priceStr;
+          console.log('Qty text:', qtyText);
+          console.log('Price text:', priceText);
+          console.log('Qty length:', qtyText.length, 'Price length:', priceText.length);
+          
+          const neededSpace = 32 - qtyText.length - priceText.length;
+          console.log('Space needed:', neededSpace);
+          
+          const spacer = neededSpace > 0 ? ' '.repeat(neededSpace) : ' ';
+          const qtyPriceLine = qtyText + spacer + priceText;
+          
+          console.log('Final line:', qtyPriceLine);
+          console.log('Final line length:', qtyPriceLine.length);
+          
           bytes.push(...this.textToBytes(qtyPriceLine));
           bytes.push(...cmd.LINE_FEED);
         }
@@ -227,21 +231,43 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Payment Info - PASTIKAN SELALU MUNCUL
+      // Payment Info - Debug version
       const paid = parseFloat(data.paid) || 0;
       const change = parseFloat(data.change) || 0;
       
+      console.log('=== PAYMENT INFO ===');
+      console.log('Paid value:', paid);
+      console.log('Change value:', change);
+      
       const paidStr = this.cleanCurrency(paid);
+      console.log('Paid formatted:', paidStr);
+      
       const paidLabel = 'BAYAR:';
       const paidSpace = 32 - paidLabel.length - paidStr.length;
-      const paidLine = paidLabel + ' '.repeat(paidSpace > 0 ? paidSpace : 1) + paidStr;
+      console.log('Paid space:', paidSpace);
+      
+      const paidSpacer = paidSpace > 0 ? ' '.repeat(paidSpace) : ' ';
+      const paidLine = paidLabel + paidSpacer + paidStr;
+      
+      console.log('Paid line:', paidLine);
+      console.log('Paid line length:', paidLine.length);
+      
       bytes.push(...this.textToBytes(paidLine));
       bytes.push(...cmd.LINE_FEED);
 
       const changeStr = this.cleanCurrency(change);
+      console.log('Change formatted:', changeStr);
+      
       const changeLabel = 'KEMBALI:';
       const changeSpace = 32 - changeLabel.length - changeStr.length;
-      const changeLine = changeLabel + ' '.repeat(changeSpace > 0 ? changeSpace : 1) + changeStr;
+      console.log('Change space:', changeSpace);
+      
+      const changeSpacer = changeSpace > 0 ? ' '.repeat(changeSpace) : ' ';
+      const changeLine = changeLabel + changeSpacer + changeStr;
+      
+      console.log('Change line:', changeLine);
+      console.log('Change line length:', changeLine.length);
+      
       bytes.push(...this.textToBytes(changeLine));
       bytes.push(...cmd.LINE_FEED);
 
