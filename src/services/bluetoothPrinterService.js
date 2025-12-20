@@ -147,22 +147,26 @@ export class BluetoothPrinterService {
 
       // Items
       data.items.forEach(item => {
-        const maxNameLength = 16;
+        // Baris pertama: Nama item
         let itemName = item.name;
-        if (itemName.length > maxNameLength) {
-          itemName = itemName.substring(0, maxNameLength - 2) + '..';
+        if (itemName.length > 32) {
+          itemName = itemName.substring(0, 29) + '...';
         }
+        bytes.push(...this.textToBytes(itemName));
+        bytes.push(...cmd.LINE_FEED);
         
+        // Baris kedua: Qty dan Harga
         const qtyStr = String(item.qty);
         const priceValue = item.price * item.qty;
         const priceStr = formatCurrency(priceValue);
         
-        // Format: nama (16 char) + qty (center in 4 char) + harga (right align in remaining space)
-        const nameSection = itemName.padEnd(16, ' ');
-        const qtySection = qtyStr.padStart(3, ' ') + ' ';
-        const priceSection = priceStr.padStart(12, ' ');
+        // Format: "  2" (qty di kiri) + spaces + harga (di kanan)
+        const qtySection = '  ' + qtyStr;
+        const totalWidth = 32;
+        const spacesNeeded = totalWidth - qtySection.length - priceStr.length;
+        const line = qtySection + ' '.repeat(Math.max(1, spacesNeeded)) + priceStr;
         
-        bytes.push(...this.textToBytes(nameSection + qtySection + priceSection));
+        bytes.push(...this.textToBytes(line));
         bytes.push(...cmd.LINE_FEED);
       });
 
@@ -170,13 +174,19 @@ export class BluetoothPrinterService {
       bytes.push(...cmd.LINE_FEED);
 
       // Subtotal
-      const subtotalLine = this.formatLineRightAlign('Subtotal:', formatCurrency(data.subtotal));
+      const subtotalLabel = 'Subtotal:';
+      const subtotalValue = formatCurrency(data.subtotal);
+      const subtotalSpaces = 32 - subtotalLabel.length - subtotalValue.length;
+      const subtotalLine = subtotalLabel + ' '.repeat(Math.max(1, subtotalSpaces)) + subtotalValue;
       bytes.push(...this.textToBytes(subtotalLine));
       bytes.push(...cmd.LINE_FEED);
 
       // Shipping Cost
       if (data.shippingCost > 0) {
-        const shippingLine = this.formatLineRightAlign('Ongkir:', formatCurrency(data.shippingCost));
+        const shippingLabel = 'Ongkir:';
+        const shippingValue = formatCurrency(data.shippingCost);
+        const shippingSpaces = 32 - shippingLabel.length - shippingValue.length;
+        const shippingLine = shippingLabel + ' '.repeat(Math.max(1, shippingSpaces)) + shippingValue;
         bytes.push(...this.textToBytes(shippingLine));
         bytes.push(...cmd.LINE_FEED);
       }
@@ -187,7 +197,10 @@ export class BluetoothPrinterService {
       // Grand Total (Bold & Larger)
       bytes.push(...cmd.BOLD_ON);
       bytes.push(...cmd.TEXT_2X_HEIGHT);
-      const totalLine = this.formatLineRightAlign('TOTAL:', formatCurrency(data.grandTotal));
+      const totalLabel = 'TOTAL:';
+      const totalValue = formatCurrency(data.grandTotal);
+      const totalSpaces = 32 - totalLabel.length - totalValue.length;
+      const totalLine = totalLabel + ' '.repeat(Math.max(1, totalSpaces)) + totalValue;
       bytes.push(...this.textToBytes(totalLine));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...cmd.TEXT_NORMAL);
@@ -197,11 +210,17 @@ export class BluetoothPrinterService {
       bytes.push(...cmd.LINE_FEED);
 
       // Payment Info
-      const paidLine = this.formatLineRightAlign('BAYAR:', formatCurrency(data.paid));
+      const paidLabel = 'BAYAR:';
+      const paidValue = formatCurrency(data.paid);
+      const paidSpaces = 32 - paidLabel.length - paidValue.length;
+      const paidLine = paidLabel + ' '.repeat(Math.max(1, paidSpaces)) + paidValue;
       bytes.push(...this.textToBytes(paidLine));
       bytes.push(...cmd.LINE_FEED);
 
-      const changeLine = this.formatLineRightAlign('KEMBALI:', formatCurrency(data.change));
+      const changeLabel = 'KEMBALI:';
+      const changeValue = formatCurrency(data.change);
+      const changeSpaces = 32 - changeLabel.length - changeValue.length;
+      const changeLine = changeLabel + ' '.repeat(Math.max(1, changeSpaces)) + changeValue;
       bytes.push(...this.textToBytes(changeLine));
       bytes.push(...cmd.LINE_FEED);
 
