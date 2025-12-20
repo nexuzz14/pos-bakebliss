@@ -149,7 +149,7 @@ export class BluetoothPrinterService {
       bytes.push(...cmd.LINE_FEED);
 
       // Items Header - FIX: Header terlalu panjang!
-      const itemHeader = 'Item                Qty   Harga';
+      const itemHeader = 'Item            Qty       Harga';
       console.log('Item header length:', itemHeader.length); // Check length
       
       bytes.push(...this.textToBytes(itemHeader));
@@ -157,7 +157,7 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Items - Debug setiap item
+      // Items - Each item in ONE line
       if (data.items && Array.isArray(data.items) && data.items.length > 0) {
         console.log('Processing', data.items.length, 'items');
         
@@ -166,34 +166,32 @@ export class BluetoothPrinterService {
           
           console.log(`\nItem ${i}:`, item.name, 'Qty:', item.qty, 'Price:', item.price);
           
-          // Item name
+          // Item name (max 16 chars to fit with qty and price)
           let name = String(item.name || item.product_name || 'Item').trim();
-          if (name.length > 32) {
-            name = name.substring(0, 29) + '...';
+          if (name.length > 16) {
+            name = name.substring(0, 13) + '...';
+          } else {
+            name = name.padEnd(16, ' '); // Pad to 16 chars
           }
-          
-          console.log(`Printing name: "${name}" (${name.length} chars)`);
-          
-          const nameBytes = this.textToBytes(name);
-          console.log('Name bytes:', nameBytes);
-          
-          bytes.push(...nameBytes);
-          bytes.push(...cmd.LINE_FEED);
           
           // Qty and price
           const qty = parseInt(item.qty) || 1;
           const price = parseFloat(item.price) || 0;
           const total = qty * price;
           
-          const qtyText = '  ' + String(qty);
+          const qtyText = String(qty).padStart(3, ' '); // Qty in 3 chars
           const priceText = this.cleanCurrency(total);
-          const spacesNeeded = 32 - qtyText.length - priceText.length;
-          const spaces = spacesNeeded > 0 ? ' '.repeat(spacesNeeded) : ' ';
           
-          const qtyPriceLine = qtyText + spaces + priceText;
-          console.log(`Qty+Price line: "${qtyPriceLine}" (${qtyPriceLine.length} chars)`);
+          // Calculate remaining space for price (right aligned)
+          // Format: name(16) + qty(3) + spaces + price(right)
+          const usedSpace = 16 + 3;
+          const remainingSpace = 32 - usedSpace - priceText.length;
+          const spaces = remainingSpace > 0 ? ' '.repeat(remainingSpace) : ' ';
           
-          bytes.push(...this.textToBytes(qtyPriceLine));
+          const itemLine = name + qtyText + spaces + priceText;
+          console.log(`Item line: "${itemLine}" (${itemLine.length} chars)`);
+          
+          bytes.push(...this.textToBytes(itemLine));
           bytes.push(...cmd.LINE_FEED);
           
           console.log(`Item ${i} done, bytes so far:`, bytes.length);
