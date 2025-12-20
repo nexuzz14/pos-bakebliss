@@ -141,6 +141,8 @@ export function CashierPage({ printerService, printerConnected, onShowToast }) {
 
             if (printerConnected) {
             try {
+              console.log('Print Data:', printData);
+              alert(JSON.stringify(printData, null, 2));
                 await printerService.print(printData);
                 printed = true;
             } catch {
