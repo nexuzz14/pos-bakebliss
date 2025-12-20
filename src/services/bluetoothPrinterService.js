@@ -121,7 +121,7 @@ export class BluetoothPrinterService {
 
     // Shipping Cost
     if (data.shippingCost > 0) {
-      const shippingLine = `Ongkir:${formatCurrency(data.shippingCost).padStart(24, ' ')}`;
+      const shippingLine = `Ongkir:${formatCurrency(data.shippingCost).padStart(22, ' ')}`;
       bytes.push(...this.textToBytes(shippingLine));
       bytes.push(...cmd.LINE_FEED);
     }
@@ -131,16 +131,16 @@ export class BluetoothPrinterService {
 
     // Grand Total
     bytes.push(...cmd.BOLD_ON);
-    const totalLine = `TOTAL:${formatCurrency(data.grandTotal).padStart(24, ' ')}`;
+    const totalLine = `TOTAL:${formatCurrency(data.grandTotal).padStart(22, ' ')}`;
     bytes.push(...this.textToBytes(totalLine));
     bytes.push(...cmd.LINE_FEED);
     bytes.push(...cmd.BOLD_OFF);
 
-    const paidLine = `BAYAR:${formatCurrency(data.paid).padStart(24, ' ')}`;
+    const paidLine = `BAYAR : ${formatCurrency(data.paid)}`;
     bytes.push(...this.textToBytes(paidLine));
     bytes.push(...cmd.LINE_FEED);
 
-    const changeLine = `KEMBALI:${formatCurrency(data.change).padStart(22, ' ')}`;
+    const changeLine = `KEMBALI: ${formatCurrency(data.change)}`;
     bytes.push(...this.textToBytes(changeLine));
     bytes.push(...cmd.LINE_FEED);
 
@@ -151,23 +151,23 @@ export class BluetoothPrinterService {
     // Footer
     bytes.push(...cmd.ALIGN_CENTER);
 
-    bytes.push(...this.textToBytes('0881-0124-64949'));
+    bytes.push(...this.textToBytes(STORE_INFO.phone));
     bytes.push(...cmd.LINE_FEED);
 
-    bytes.push(
-      ...this.textToBytes(
-        'We love to hear your feedback (the sweet and the bitter one 😋)'
-      )
-    );
+    bytes.push(...this.textToBytes('We love to hear your feedback'));
     bytes.push(...cmd.LINE_FEED);
 
-    // 🔹 spasi kosong (setara <br>)
+    bytes.push(...this.textToBytes('(the sweet and the bitter one)'));
     bytes.push(...cmd.LINE_FEED);
 
+    // spasi
+    bytes.push(...cmd.LINE_FEED);
+
+    bytes.push(...cmd.BOLD_ON);
     bytes.push(...this.textToBytes('Thank you!'));
+    bytes.push(...cmd.BOLD_OFF);
     bytes.push(...cmd.LINE_FEED);
 
-    // extra feed biar nota rapi sebelum cut
     bytes.push(...cmd.LINE_FEED);
     bytes.push(...cmd.LINE_FEED);
 
