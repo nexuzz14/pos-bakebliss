@@ -152,33 +152,33 @@ export class BluetoothPrinterService {
       bytes.push(...cmd.LINE_FEED);
 
       // Items Header
-      const headerText = 'Item                Qty       Harga';
-      bytes.push(...this.textToBytes(headerText));
+      bytes.push(...this.textToBytes('Item                Qty   Harga'));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
       // Items
       data.items.forEach(item => {
-        // Baris pertama: Nama item saja
-        let itemName = String(item.name);
+        // Nama item di baris tersendiri
+        let itemName = String(item.name || '');
         if (itemName.length > 32) {
           itemName = itemName.substring(0, 29) + '...';
         }
         bytes.push(...this.textToBytes(itemName));
         bytes.push(...cmd.LINE_FEED);
         
-        // Baris kedua: Qty dan Harga dengan format yang tepat
-        const qtyNum = Number(item.qty);
-        const priceValue = Number(item.price) * qtyNum;
-        const priceStr = this.cleanCurrency(priceValue);
+        // Baris qty dan harga
+        const qtyNum = parseInt(item.qty) || 0;
+        const priceNum = parseFloat(item.price) || 0;
+        const totalPrice = qtyNum * priceNum;
         
-        // Qty di kiri dengan padding
-        const qtyText = String(qtyNum) + 'Rp';
-        const spacesNeeded = 32 - qtyText.length - priceStr.length;
-        const itemLine = '  ' + qtyText + ' '.repeat(Math.max(1, spacesNeeded)) + priceStr;
+        // Format: "  2              Rp58.000"
+        const qtyText = '  ' + qtyNum;
+        const priceText = this.cleanCurrency(totalPrice);
+        const spaces = 32 - qtyText.length - priceText.length;
+        const qtyPriceLine = qtyText + ' '.repeat(Math.max(1, spaces)) + priceText;
         
-        bytes.push(...this.textToBytes(itemLine));
+        bytes.push(...this.textToBytes(qtyPriceLine));
         bytes.push(...cmd.LINE_FEED);
       });
 
@@ -206,16 +206,14 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Grand Total (Bold & Larger)
+      // Grand Total - TANPA text size besar karena bikin format berantakan
       bytes.push(...cmd.BOLD_ON);
-      bytes.push(...cmd.TEXT_2X_HEIGHT);
       const totalLabel = 'TOTAL:';
       const totalValue = this.cleanCurrency(data.grandTotal);
       const totalSpaces = 32 - totalLabel.length - totalValue.length;
       const totalLine = totalLabel + ' '.repeat(Math.max(1, totalSpaces)) + totalValue;
       bytes.push(...this.textToBytes(totalLine));
       bytes.push(...cmd.LINE_FEED);
-      bytes.push(...cmd.TEXT_NORMAL);
       bytes.push(...cmd.BOLD_OFF);
 
       bytes.push(...this.textToBytes(this.createLine('=', 32)));
