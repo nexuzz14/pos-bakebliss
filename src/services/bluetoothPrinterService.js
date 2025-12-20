@@ -55,12 +55,9 @@ export class BluetoothPrinterService {
       INIT: [0x1B, 0x40],
       ALIGN_CENTER: [0x1B, 0x61, 0x01],
       ALIGN_LEFT: [0x1B, 0x61, 0x00],
-      ALIGN_RIGHT: [0x1B, 0x61, 0x02],
       BOLD_ON: [0x1B, 0x45, 0x01],
       BOLD_OFF: [0x1B, 0x45, 0x00],
       TEXT_NORMAL: [0x1D, 0x21, 0x00],
-      TEXT_2X_HEIGHT: [0x1D, 0x21, 0x01],
-      TEXT_2X_WIDTH: [0x1D, 0x21, 0x10],
       TEXT_2X: [0x1D, 0x21, 0x11],
       LINE_FEED: [0x0A],
       CUT_PAPER: [0x1D, 0x56, 0x00],
@@ -72,17 +69,14 @@ export class BluetoothPrinterService {
     return Array.from(encoder.encode(text));
   }
 
-  // Helper untuk format currency yang kompatibel dengan printer thermal
   cleanCurrency(value) {
     try {
       const numValue = Number(value);
       if (isNaN(numValue)) return 'Rp0';
       
-      // Format manual tanpa locale
       const absValue = Math.abs(numValue);
       const strValue = String(Math.floor(absValue));
       
-      // Tambahkan separator ribuan manual
       let formatted = '';
       let count = 0;
       for (let i = strValue.length - 1; i >= 0; i--) {
@@ -113,18 +107,19 @@ export class BluetoothPrinterService {
     let bytes = [];
 
     try {
+      console.log('=== STARTING PRINT ===');
+      console.log('Data:', JSON.stringify(data));
+
       // Initialize
       bytes.push(...cmd.INIT);
-      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Header - Store Name
+      // Header
       bytes.push(...cmd.ALIGN_CENTER);
       bytes.push(...cmd.TEXT_2X);
       bytes.push(...cmd.BOLD_ON);
       bytes.push(...this.textToBytes(STORE_INFO.name));
       bytes.push(...cmd.LINE_FEED);
       
-      // Store Address
       bytes.push(...cmd.TEXT_NORMAL);
       bytes.push(...cmd.BOLD_OFF);
       bytes.push(...this.textToBytes(STORE_INFO.address));
@@ -137,7 +132,6 @@ export class BluetoothPrinterService {
       bytes.push(...cmd.ALIGN_LEFT);
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
-      
       bytes.push(...this.textToBytes('No: ' + data.transactionNo));
       bytes.push(...cmd.LINE_FEED);
       
@@ -151,7 +145,6 @@ export class BluetoothPrinterService {
       });
       bytes.push(...this.textToBytes(dateStr));
       bytes.push(...cmd.LINE_FEED);
-      
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
@@ -161,37 +154,30 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Items - Simplified tanpa terlalu banyak log
-      if (data.items && Array.isArray(data.items)) {
-        for (let idx = 0; idx < data.items.length; idx++) {
-          const item = data.items[idx];
+      // Items
+      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+        for (let i = 0; i < data.items.length; i++) {
+          const item = data.items[i];
           
-          // Nama item - print langsung
-          let itemName = item.name ? String(item.name) : ('Item ' + (idx + 1));
-          if (itemName.length > 32) {
-            itemName = itemName.substring(0, 29) + '...';
+          // Item name
+          let name = String(item.name || item.product_name || 'Item').trim();
+          if (name.length > 32) {
+            name = name.substring(0, 29) + '...';
           }
           
-          bytes.push(...this.textToBytes(itemName));
+          bytes.push(...this.textToBytes(name));
           bytes.push(...cmd.LINE_FEED);
           
-          // Qty dan Price
+          // Qty and price
           const qty = parseInt(item.qty) || 1;
           const price = parseFloat(item.price) || 0;
-          const totalPrice = qty * price;
+          const total = qty * price;
           
-          // Format line: "  2                    Rp58.000"
-          const qtyPart = '  ' + String(qty);
-          const pricePart = this.cleanCurrency(totalPrice);
+          const qtyText = '  ' + String(qty);
+          const priceText = this.cleanCurrency(total);
+          const spaces = 32 - qtyText.length - priceText.length;
           
-          // Total width = 32
-          // qtyPart di kiri, pricePart di kanan
-          const spacesCount = 32 - qtyPart.length - pricePart.length;
-          const spaces = spacesCount > 0 ? ' '.repeat(spacesCount) : ' ';
-          
-          const fullLine = qtyPart + spaces + pricePart;
-          
-          bytes.push(...this.textToBytes(fullLine));
+          bytes.push(...this.textToBytes(qtyText + ' '.repeat(Math.max(1, spaces)) + priceText));
           bytes.push(...cmd.LINE_FEED);
         }
       }
@@ -203,57 +189,53 @@ export class BluetoothPrinterService {
       const subtotal = parseFloat(data.subtotal) || 0;
       const subtotalStr = this.cleanCurrency(subtotal);
       const subtotalLabel = 'Subtotal:';
-      const subtotalSpace = 32 - subtotalLabel.length - subtotalStr.length;
-      const subtotalLine = subtotalLabel + ' '.repeat(subtotalSpace > 0 ? subtotalSpace : 1) + subtotalStr;
-      bytes.push(...this.textToBytes(subtotalLine));
+      const subtotalSpaces = Math.max(1, 32 - subtotalLabel.length - subtotalStr.length);
+      bytes.push(...this.textToBytes(subtotalLabel + ' '.repeat(subtotalSpaces) + subtotalStr));
       bytes.push(...cmd.LINE_FEED);
 
-      // Shipping Cost
+      // Shipping
       const shipping = parseFloat(data.shippingCost) || 0;
       if (shipping > 0) {
         const shippingStr = this.cleanCurrency(shipping);
         const shippingLabel = 'Ongkir:';
-        const shippingSpace = 32 - shippingLabel.length - shippingStr.length;
-        const shippingLine = shippingLabel + ' '.repeat(shippingSpace > 0 ? shippingSpace : 1) + shippingStr;
-        bytes.push(...this.textToBytes(shippingLine));
+        const shippingSpaces = Math.max(1, 32 - shippingLabel.length - shippingStr.length);
+        bytes.push(...this.textToBytes(shippingLabel + ' '.repeat(shippingSpaces) + shippingStr));
         bytes.push(...cmd.LINE_FEED);
       }
 
       bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Grand Total
+      // Total
       bytes.push(...cmd.BOLD_ON);
       const grandTotal = parseFloat(data.grandTotal) || 0;
       const totalStr = this.cleanCurrency(grandTotal);
       const totalLabel = 'TOTAL:';
-      const totalSpace = 32 - totalLabel.length - totalStr.length;
-      const totalLine = totalLabel + ' '.repeat(totalSpace > 0 ? totalSpace : 1) + totalStr;
-      bytes.push(...this.textToBytes(totalLine));
+      const totalSpaces = Math.max(1, 32 - totalLabel.length - totalStr.length);
+      bytes.push(...this.textToBytes(totalLabel + ' '.repeat(totalSpaces) + totalStr));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...cmd.BOLD_OFF);
 
       bytes.push(...this.textToBytes(this.createLine('=', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Payment Info - Fix field names
+      // Payment
       const paid = parseFloat(data.paid || data.paidAmount) || 0;
-      const change = parseFloat(data.change) || 0;
-      
+      let change = parseFloat(data.change) || 0;
+      if (!data.change || change === 0) {
+        change = paid - grandTotal;
+      }
+
       const paidStr = this.cleanCurrency(paid);
       const paidLabel = 'BAYAR:';
-      const paidSpaces = 32 - paidLabel.length - paidStr.length;
-      const paidLine = paidLabel + ' '.repeat(paidSpaces > 0 ? paidSpaces : 1) + paidStr;
-      
-      bytes.push(...this.textToBytes(paidLine));
+      const paidSpaces = Math.max(1, 32 - paidLabel.length - paidStr.length);
+      bytes.push(...this.textToBytes(paidLabel + ' '.repeat(paidSpaces) + paidStr));
       bytes.push(...cmd.LINE_FEED);
 
       const changeStr = this.cleanCurrency(change);
       const changeLabel = 'KEMBALI:';
-      const changeSpaces = 32 - changeLabel.length - changeStr.length;
-      const changeLine = changeLabel + ' '.repeat(changeSpaces > 0 ? changeSpaces : 1) + changeStr;
-      
-      bytes.push(...this.textToBytes(changeLine));
+      const changeSpaces = Math.max(1, 32 - changeLabel.length - changeStr.length);
+      bytes.push(...this.textToBytes(changeLabel + ' '.repeat(changeSpaces) + changeStr));
       bytes.push(...cmd.LINE_FEED);
 
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
@@ -262,8 +244,6 @@ export class BluetoothPrinterService {
 
       // Footer
       bytes.push(...cmd.ALIGN_CENTER);
-      
-      // Phone number
       bytes.push(...this.textToBytes(STORE_INFO.phone));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...cmd.LINE_FEED);
@@ -281,10 +261,12 @@ export class BluetoothPrinterService {
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...cmd.LINE_FEED);
 
-      // Cut paper
+      // Cut
       bytes.push(...cmd.CUT_PAPER);
 
-      // Send to printer
+      console.log('Total bytes:', bytes.length);
+
+      // Send in chunks
       const chunkSize = 256;
       for (let i = 0; i < bytes.length; i += chunkSize) {
         const chunk = bytes.slice(i, i + chunkSize);
@@ -292,6 +274,7 @@ export class BluetoothPrinterService {
         await new Promise(resolve => setTimeout(resolve, 150));
       }
 
+      console.log('Print completed');
       return true;
     } catch (error) {
       console.error('Print failed:', error);
