@@ -148,16 +148,23 @@ export class BluetoothPrinterService {
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Items Header
-      bytes.push(...this.textToBytes('Item                Qty   Harga'));
+      // Items Header - FIX: Header terlalu panjang!
+      const itemHeader = 'Item                Qty   Harga';
+      console.log('Item header length:', itemHeader.length); // Check length
+      
+      bytes.push(...this.textToBytes(itemHeader));
       bytes.push(...cmd.LINE_FEED);
       bytes.push(...this.textToBytes(this.createLine('-', 32)));
       bytes.push(...cmd.LINE_FEED);
 
-      // Items
+      // Items - Debug setiap item
       if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+        console.log('Processing', data.items.length, 'items');
+        
         for (let i = 0; i < data.items.length; i++) {
           const item = data.items[i];
+          
+          console.log(`\nItem ${i}:`, item.name, 'Qty:', item.qty, 'Price:', item.price);
           
           // Item name
           let name = String(item.name || item.product_name || 'Item').trim();
@@ -165,7 +172,12 @@ export class BluetoothPrinterService {
             name = name.substring(0, 29) + '...';
           }
           
-          bytes.push(...this.textToBytes(name));
+          console.log(`Printing name: "${name}" (${name.length} chars)`);
+          
+          const nameBytes = this.textToBytes(name);
+          console.log('Name bytes:', nameBytes);
+          
+          bytes.push(...nameBytes);
           bytes.push(...cmd.LINE_FEED);
           
           // Qty and price
@@ -175,10 +187,16 @@ export class BluetoothPrinterService {
           
           const qtyText = '  ' + String(qty);
           const priceText = this.cleanCurrency(total);
-          const spaces = 32 - qtyText.length - priceText.length;
+          const spacesNeeded = 32 - qtyText.length - priceText.length;
+          const spaces = spacesNeeded > 0 ? ' '.repeat(spacesNeeded) : ' ';
           
-          bytes.push(...this.textToBytes(qtyText + ' '.repeat(Math.max(1, spaces)) + priceText));
+          const qtyPriceLine = qtyText + spaces + priceText;
+          console.log(`Qty+Price line: "${qtyPriceLine}" (${qtyPriceLine.length} chars)`);
+          
+          bytes.push(...this.textToBytes(qtyPriceLine));
           bytes.push(...cmd.LINE_FEED);
+          
+          console.log(`Item ${i} done, bytes so far:`, bytes.length);
         }
       }
 
@@ -265,13 +283,18 @@ export class BluetoothPrinterService {
       bytes.push(...cmd.CUT_PAPER);
 
       console.log('Total bytes:', bytes.length);
+      console.log('Sending to printer...');
 
-      // Send in chunks
-      const chunkSize = 256;
+      // Send header first (up to items)
+      const headerEndIndex = bytes.length;
+      
+      // Send in smaller chunks with longer delays
+      const chunkSize = 128; // Smaller chunks
       for (let i = 0; i < bytes.length; i += chunkSize) {
         const chunk = bytes.slice(i, i + chunkSize);
+        console.log(`Sending chunk ${Math.floor(i/chunkSize) + 1}, bytes ${i}-${i+chunk.length}`);
         await this.characteristic.writeValue(new Uint8Array(chunk));
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise(resolve => setTimeout(resolve, 200)); // Longer delay
       }
 
       console.log('Print completed');
