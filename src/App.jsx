@@ -1,25 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Printer, Package, Receipt, Sun, Moon } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CashierPage } from './pages/CashierPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { TransactionsPage } from './pages/TransactionsPage';
-import { Toast } from './components/Toast';
 import { BluetoothPrinterService } from './services/bluetoothPrinterService';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { CashFlowPage } from './pages/CashFlowPage';
+import { IngredientsPage } from './pages/IngredientsPage';
+import { UsersPage } from './pages/UsersPage';
+import { Layout } from './components/Layout';
+
+// Protected Route Wrapper
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, role, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && role && !allowedRoles.includes(role)) {
+    // If user doesn't have the required role, redirect them to a default safe page
+    return <Navigate to="/cashier" replace />;
+  }
+
+  return children;
+};
 
 export default function App() {
-  const [screen, setScreen] = useState('cashier');
   const [printerService] = useState(new BluetoothPrinterService());
   const [printerConnected, setPrinterConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
-
-  // 🌗 THEME STATE
-  const [theme, setTheme] = useState('light');
-
-  // APPLY THEME KE HTML
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
 
   const autoConnectPrinter = async () => {
     if (printerService.isSupported()) {
@@ -29,9 +45,9 @@ export default function App() {
   };
 
   useEffect(() => {
-      (async () => {
-          await autoConnectPrinter();
-      })();
+    (async () => {
+      await autoConnectPrinter();
+    })();
   }, []);
 
   const connectPrinter = async () => {
@@ -48,85 +64,110 @@ export default function App() {
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
-      
-      {/* Toast */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Route */}
+          <Route path="/login" element={<LoginPage />} />
 
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-bold">🍰 Kasir BakeBliss</h1>
-
-        <div className="flex gap-2 items-center">
-          {/* THEME TOGGLE */}
-          <button
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700"
-            title="Toggle Theme"
+          {/* Protected Routes inside Layout */}
+          <Route 
+            element={
+              <ProtectedRoute>
+                <Layout 
+                  printerService={printerService} 
+                  printerConnected={printerConnected} 
+                  connectPrinter={connectPrinter}
+                  loading={loading}
+                  toast={toast}
+                  setToast={setToast}
+                />
+              </ProtectedRoute>
+            }
           >
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          </button>
+            {/* Dashboard: Admin & Manager only */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <DashboardPage />
+                </ProtectedRoute>
+              } 
+            />
 
-          {/* PRINTER */}
-          {!printerConnected ? (
-            <button
-              onClick={connectPrinter}
-              className="p-2 bg-blue-600 rounded-lg hover:bg-blue-700"
-              disabled={loading}
-            >
-              <Printer size={20} />
-            </button>
-          ) : (
-            <div className="p-2 bg-green-600 rounded-lg">
-              <Printer size={20} />
-            </div>
-          )}
-        </div>
-      </div>
+            {/* Cashier: Admin, Manager, Cashier */}
+            <Route 
+              path="/cashier" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager', 'cashier']}>
+                  <CashierPage
+                    printerService={printerService}
+                    printerConnected={printerConnected}
+                    onShowToast={showToast}
+                  />
+                </ProtectedRoute>
+              } 
+            />
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex z-30">
-        {[
-          { id: 'cashier', label: 'Kasir', icon: <ShoppingCart size={24} /> },
-          { id: 'products', label: 'Produk', icon: <Package size={24} /> },
-          { id: 'transactions', label: 'Transaksi', icon: <Receipt size={24} /> },
-        ].map(item => (
-          <button
-            key={item.id}
-            onClick={() => setScreen(item.id)}
-            className={`flex-1 p-4 flex flex-col items-center gap-1 ${
-              screen === item.id
-                ? 'bg-blue-600 text-white'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            {item.icon}
-            <span className="text-xs">{item.label}</span>
-          </button>
-        ))}
-      </div>
+            {/* Menu Management: Admin & Manager only */}
+            <Route 
+              path="/menu" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <ProductsPage onShowToast={showToast} />
+                </ProtectedRoute>
+              } 
+            />
 
-      {/* Main Content */}
-      <div className="pb-20 p-4">
-        {screen === 'cashier' && (
-          <CashierPage
-            printerService={printerService}
-            printerConnected={printerConnected}
-            onShowToast={showToast}
-          />
-        )}
-        {screen === 'products' && <ProductsPage onShowToast={showToast} />}
-        {screen === 'transactions' && <TransactionsPage />}
-      </div>
-    </div>
+            {/* Transactions: Admin, Manager, Cashier */}
+            <Route 
+              path="/transactions" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager', 'cashier']}>
+                  <TransactionsPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Cash Flow: Admin & Manager only */}
+            <Route 
+              path="/cashflow" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <CashFlowPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Ingredients: Admin & Manager only */}
+            <Route 
+              path="/ingredients" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <IngredientsPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Users: Admin only */}
+            <Route 
+              path="/users" 
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <UsersPage />
+                </ProtectedRoute>
+              } 
+            />
+          </Route>
+
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/cashier" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }

@@ -3,12 +3,14 @@ import { supabase } from './supabase';
 export const transactionService = {
   async create(data) {
     try {
-      // const transactionNo = `TRX${Date.now()}`;
+      // Generate nomor transaksi
+      const transactionNo = `TRX${Date.now()}`;
 
-      // ✅ INSERT TRANSACTION (WAJIB ARRAY)
+      // ✅ INSERT TRANSACTION
       const { data: trx, error } = await supabase
         .from('transactions')
         .insert([{
+          transaction_no: transactionNo,
           total: data.total,
           shipping_cost: data.shipping_cost || 0,
           grand_total: data.grand_total,
@@ -35,6 +37,22 @@ export const transactionService = {
         .insert(items);
 
       if (itemError) throw itemError;
+
+      // ✅ AUTO INSERT CASH FLOW (uang masuk dari penjualan)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('cash_flow').insert({
+          type: 'in',
+          category: 'Penjualan',
+          description: `Transaksi ${transactionNo} — ${data.items.length} item`,
+          amount: data.grand_total,
+          date: new Date().toISOString().split('T')[0],
+          user_id: user?.id ?? null
+        });
+      } catch (cfErr) {
+        // Jangan gagalkan transaksi hanya karena cash flow gagal
+        console.warn('Auto cash flow insert failed:', cfErr);
+      }
 
       return trx;
     } catch (error) {
