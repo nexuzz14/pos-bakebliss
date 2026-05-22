@@ -128,7 +128,11 @@ export default function App() {
               path="/transactions" 
               element={
                 <ProtectedRoute allowedRoles={['admin', 'manager', 'cashier']}>
-                  <TransactionsPage />
+                  <TransactionsPage 
+                    printerService={printerService}
+                    printerConnected={printerConnected}
+                    onShowToast={showToast}
+                  />
                 </ProtectedRoute>
               } 
             />
