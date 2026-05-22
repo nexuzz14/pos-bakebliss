@@ -3,8 +3,33 @@ import { supabase } from './supabase';
 export const transactionService = {
   async create(data) {
     try {
-      // Generate nomor transaksi
-      const transactionNo = `TRX${Date.now()}`;
+      // Get today's date info for daily reset sequence
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0].replace(/-/g, ''); // e.g. 20260523
+      const todayStart = new Date(now.setHours(0,0,0,0)).toISOString();
+      const todayEnd = new Date(now.setHours(23,59,59,999)).toISOString();
+
+      // Fetch the latest transaction number for today
+      const { data: latestTrx } = await supabase
+        .from('transactions')
+        .select('transaction_no')
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      let nextSequence = 1;
+      if (latestTrx && latestTrx.length > 0) {
+        const lastNo = latestTrx[0].transaction_no;
+        // Expecting format TRX-YYYYMMDD-XXXX
+        const parts = lastNo.split('-');
+        if (parts.length === 3) {
+          nextSequence = parseInt(parts[2], 10) + 1;
+        }
+      }
+
+      // Generate sequence like TRX-20260523-0001
+      const transactionNo = `TRX-${dateStr}-${String(nextSequence).padStart(4, '0')}`;
 
       // ✅ INSERT TRANSACTION
       const { data: trx, error } = await supabase
