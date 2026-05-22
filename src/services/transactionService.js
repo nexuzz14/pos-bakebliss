@@ -3,39 +3,11 @@ import { supabase } from './supabase';
 export const transactionService = {
   async create(data) {
     try {
-      // Get today's date info for daily reset sequence
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0].replace(/-/g, ''); // e.g. 20260523
-      const todayStart = new Date(now.setHours(0,0,0,0)).toISOString();
-      const todayEnd = new Date(now.setHours(23,59,59,999)).toISOString();
-
-      // Fetch the latest transaction number for today
-      const { data: latestTrx } = await supabase
-        .from('transactions')
-        .select('transaction_no')
-        .gte('created_at', todayStart)
-        .lte('created_at', todayEnd)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      let nextSequence = 1;
-      if (latestTrx && latestTrx.length > 0) {
-        const lastNo = latestTrx[0].transaction_no;
-        // Expecting format TRX-YYYYMMDD-XXXX
-        const parts = lastNo.split('-');
-        if (parts.length === 3) {
-          nextSequence = parseInt(parts[2], 10) + 1;
-        }
-      }
-
-      // Generate sequence like TRX-20260523-0001
-      const transactionNo = `TRX-${dateStr}-${String(nextSequence).padStart(4, '0')}`;
-
-      // ✅ INSERT TRANSACTION
+      // ✅ INSERT TRANSACTION (transaction_no akan digenerate otomatis oleh Database Trigger Supabase)
       const { data: trx, error } = await supabase
         .from('transactions')
         .insert([{
-          transaction_no: transactionNo,
+          transaction_no: '', // Kosongkan agar diisi otomatis oleh trigger
           total: data.total,
           shipping_cost: data.shipping_cost || 0,
           grand_total: data.grand_total,
@@ -46,6 +18,8 @@ export const transactionService = {
         .single();
 
       if (error) throw error;
+      
+      const transactionNo = trx.transaction_no; // Ambil nomor hasil generate dari Supabase
 
       // ✅ INSERT ITEMS
       const items = data.items.map(item => ({
