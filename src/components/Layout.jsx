@@ -112,7 +112,7 @@ export function Layout({ printerService, printerConnected, connectPrinter, loadi
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
 
-            {location.pathname === '/cashier' && (
+            {(location.pathname === '/cashier' || location.pathname === '/transactions') && (
               !printerConnected ? (
                 <button
                   onClick={connectPrinter}
@@ -134,9 +134,9 @@ export function Layout({ printerService, printerConnected, connectPrinter, loadi
           </div>
         </header>
 
-        {/* Desktop Topbar for Printer (Only on Cashier) */}
+        {/* Desktop Topbar for Printer */}
         <header className="hidden md:flex bg-white dark:bg-gray-800 p-4 items-center justify-end border-b border-gray-200 dark:border-gray-700">
-           {location.pathname === '/cashier' ? (
+           {(location.pathname === '/cashier' || location.pathname === '/transactions') ? (
              <div className="flex gap-2 items-center">
                 <span className="mr-2 font-medium">Printer Status:</span>
                 {!printerConnected ? (
