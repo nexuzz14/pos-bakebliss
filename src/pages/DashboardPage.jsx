@@ -5,7 +5,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
-import { TrendingUp, ShoppingBag, DollarSign, ArrowUpRight, ArrowDownRight, Package } from 'lucide-react';
+import { TrendingUp, ShoppingBag, DollarSign, ArrowUpRight, ArrowDownRight, Package, Eye, EyeOff } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe'];
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -15,12 +15,15 @@ export function DashboardPage() {
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
+  const [showMoney, setShowMoney] = useState(false);
   
   const [stats, setStats] = useState({ todaySales: 0, todayTrx: 0, monthlySales: 0, monthlyTrx: 0, prevMonthSales: 0, dailyAvg: 0 });
   const [chartData, setChartData] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
   const [cashSummary, setCashSummary] = useState({ totalIn: 0, totalOut: 0 });
   const [loading, setLoading] = useState(true);
+
+  const displayMoney = useCallback((val) => showMoney ? formatCurrency(val) : 'Rp •••••••', [showMoney]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -123,7 +126,7 @@ export function DashboardPage() {
       return (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 shadow-lg text-sm">
           <p className="text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-          <p className="font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(payload[0].value)}</p>
+          <p className="font-bold text-indigo-600 dark:text-indigo-400">{displayMoney(payload[0].value)}</p>
         </div>
       );
     }
@@ -154,11 +157,20 @@ export function DashboardPage() {
 
       {/* Header & Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Dashboard</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Ringkasan performa bisnis
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold">Dashboard</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Ringkasan performa bisnis
+            </p>
+          </div>
+          <button 
+            onClick={() => setShowMoney(!showMoney)}
+            className="p-2 ml-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 transition-all shadow-sm"
+            title={showMoney ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+          >
+            {showMoney ? <Eye size={20} /> : <EyeOff size={20} />}
+          </button>
         </div>
         
         {/* FILTER */}
@@ -197,7 +209,7 @@ export function DashboardPage() {
             </span>
           </div>
           <p className="text-2xl font-bold truncate">
-            {formatCurrency(isCurrentMonth ? stats.todaySales : stats.dailyAvg)}
+            {displayMoney(isCurrentMonth ? stats.todaySales : stats.dailyAvg)}
           </p>
           <p className="text-indigo-200 text-xs mt-1 font-medium">
             {isCurrentMonth ? `${stats.todayTrx} transaksi hari ini` : 'Estimasi per hari'}
@@ -217,7 +229,7 @@ export function DashboardPage() {
               </span>
             )}
           </div>
-          <p className="text-lg font-bold truncate">{formatCurrency(stats.monthlySales)}</p>
+          <p className="text-lg font-bold truncate">{displayMoney(stats.monthlySales)}</p>
           <p className="text-gray-400 text-xs mt-1">Total {MONTHS[selectedMonth]} • {stats.monthlyTrx} trx</p>
         </div>
 
@@ -228,7 +240,7 @@ export function DashboardPage() {
               <ArrowUpRight size={18} className="text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
-          <p className="text-lg font-bold truncate text-emerald-600 dark:text-emerald-400">{formatCurrency(cashSummary.totalIn)}</p>
+          <p className="text-lg font-bold truncate text-emerald-600 dark:text-emerald-400">{displayMoney(cashSummary.totalIn)}</p>
           <p className="text-gray-400 text-xs mt-1">Kas masuk {MONTHS[selectedMonth]}</p>
         </div>
 
@@ -239,7 +251,7 @@ export function DashboardPage() {
               <ArrowDownRight size={18} className="text-red-500 dark:text-red-400" />
             </div>
           </div>
-          <p className="text-lg font-bold truncate text-red-500 dark:text-red-400">{formatCurrency(cashSummary.totalOut)}</p>
+          <p className="text-lg font-bold truncate text-red-500 dark:text-red-400">{displayMoney(cashSummary.totalOut)}</p>
           <p className="text-gray-400 text-xs mt-1">Kas keluar {MONTHS[selectedMonth]}</p>
         </div>
       </div>
@@ -308,7 +320,7 @@ export function DashboardPage() {
             <div>
               <div className="flex justify-between text-sm mb-1.5">
                 <span className="text-gray-500">Masuk</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(cashSummary.totalIn)}</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">{displayMoney(cashSummary.totalIn)}</span>
               </div>
               <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-700"
@@ -320,7 +332,7 @@ export function DashboardPage() {
             <div>
               <div className="flex justify-between text-sm mb-1.5">
                 <span className="text-gray-500">Keluar</span>
-                <span className="font-semibold text-red-500 dark:text-red-400">{formatCurrency(cashSummary.totalOut)}</span>
+                <span className="font-semibold text-red-500 dark:text-red-400">{displayMoney(cashSummary.totalOut)}</span>
               </div>
               <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div className="h-full bg-red-500 rounded-full transition-all duration-700"
@@ -332,7 +344,7 @@ export function DashboardPage() {
             <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
               <span className="font-semibold text-sm">Saldo Bersih</span>
               <span className={`text-lg font-bold ${cashSummary.totalIn - cashSummary.totalOut >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-                {formatCurrency(cashSummary.totalIn - cashSummary.totalOut)}
+                {displayMoney(cashSummary.totalIn - cashSummary.totalOut)}
               </span>
             </div>
           </div>
