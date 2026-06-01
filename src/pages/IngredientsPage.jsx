@@ -4,7 +4,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { exportToExcel } from '../utils/exportExcel';
 import {
   PlusCircle, FlaskConical, Download, X, Pencil,
-  Trash2, AlertTriangle, ChevronDown, Search
+  Trash2, AlertTriangle, ChevronDown, Search, Eye, EyeOff
 } from 'lucide-react';
 
 const UNITS = ['kg', 'gram', 'liter', 'ml', 'pcs', 'lusin', 'pak', 'sachet', 'botol', 'kaleng'];
@@ -27,6 +27,9 @@ export function IngredientsPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [showMoney, setShowMoney] = useState(false);
+
+  const displayMoney = useCallback((val) => showMoney ? formatCurrency(val) : 'Rp •••••••', [showMoney]);
 
   const fetchIngredients = useCallback(async () => {
     setLoading(true);
@@ -134,9 +137,18 @@ export function IngredientsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">🥣 Bahan</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Manajemen stok bahan baku</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold">🥣 Bahan</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manajemen stok bahan baku</p>
+          </div>
+          <button 
+            onClick={() => setShowMoney(!showMoney)}
+            className="p-2 ml-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 transition-all shadow-sm"
+            title={showMoney ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+          >
+            {showMoney ? <Eye size={20} /> : <EyeOff size={20} />}
+          </button>
         </div>
         <div className="flex gap-2">
           <button
@@ -283,7 +295,7 @@ export function IngredientsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 col-span-2 sm:col-span-1">
           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Nilai Stok</p>
           <p className="text-lg font-bold mt-1">
-            {formatCurrency(ingredients.reduce((s, i) => s + Number(i.stock) * Number(i.price_per_unit), 0))}
+            {displayMoney(ingredients.reduce((s, i) => s + Number(i.stock) * Number(i.price_per_unit), 0))}
           </p>
         </div>
       </div>
@@ -332,7 +344,7 @@ export function IngredientsPage() {
                       {Number(item.min_stock).toLocaleString('id-ID')} {item.unit}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400 hidden md:table-cell">
-                      {formatCurrency(item.price_per_unit)}/{item.unit}
+                      {displayMoney(item.price_per_unit)}/{item.unit}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {isLowStock(item) ? (
