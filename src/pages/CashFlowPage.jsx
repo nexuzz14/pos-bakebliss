@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { exportToExcel } from '../utils/exportExcel';
 import {
   PlusCircle, TrendingUp, TrendingDown, Wallet,
-  Download, Filter, X, Pencil, Trash2, ChevronDown
+  Download, Filter, X, Pencil, Trash2, ChevronDown, Eye, EyeOff
 } from 'lucide-react';
 
 const CATEGORIES_IN = ['Penjualan', 'Modal', 'Investasi', 'Lain-lain'];
@@ -30,6 +30,9 @@ export function CashFlowPage() {
   const [filterType, setFilterType] = useState('all');
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [deleteId, setDeleteId] = useState(null);
+  const [showMoney, setShowMoney] = useState(false);
+
+  const displayMoney = useCallback((val) => showMoney ? formatCurrency(val) : 'Rp •••••••', [showMoney]);
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -140,9 +143,18 @@ export function CashFlowPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">💰 Kas</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Pencatatan uang masuk & keluar</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold">💰 Kas</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Pencatatan uang masuk & keluar</p>
+          </div>
+          <button 
+            onClick={() => setShowMoney(!showMoney)}
+            className="p-2 ml-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 transition-all shadow-sm"
+            title={showMoney ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+          >
+            {showMoney ? <Eye size={20} /> : <EyeOff size={20} />}
+          </button>
         </div>
         <div className="flex gap-2">
           <button
@@ -170,7 +182,7 @@ export function CashFlowPage() {
           </div>
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Masuk</p>
-            <p className="text-sm font-bold text-green-600 dark:text-green-400 truncate">{formatCurrency(totalIn)}</p>
+            <p className="text-sm font-bold text-green-600 dark:text-green-400 truncate">{displayMoney(totalIn)}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 flex items-center gap-3">
@@ -179,7 +191,7 @@ export function CashFlowPage() {
           </div>
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Keluar</p>
-            <p className="text-sm font-bold text-red-600 dark:text-red-400 truncate">{formatCurrency(totalOut)}</p>
+            <p className="text-sm font-bold text-red-600 dark:text-red-400 truncate">{displayMoney(totalOut)}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 flex items-center gap-3">
@@ -189,7 +201,7 @@ export function CashFlowPage() {
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Saldo</p>
             <p className={`text-sm font-bold truncate ${balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-              {formatCurrency(balance)}
+              {displayMoney(balance)}
             </p>
           </div>
         </div>
@@ -362,7 +374,7 @@ export function CashFlowPage() {
                     <td className={`px-4 py-3 text-right font-semibold whitespace-nowrap ${
                       r.type === 'in' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                     }`}>
-                      {r.type === 'in' ? '+' : '-'}{formatCurrency(r.amount)}
+                      {r.type === 'in' ? '+' : '-'}{displayMoney(r.amount)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 justify-end">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Receipt, Calendar, Truck, Package, X, Printer, Search, TrendingUp, ShoppingBag, BarChart2, ChevronRight } from 'lucide-react';
+import { Receipt, Calendar, Truck, Package, X, Printer, Search, TrendingUp, ShoppingBag, BarChart2, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { transactionService } from '../services/transactionService';
 import { formatCurrency } from '../utils/formatCurrency';
 import { handleError } from '../utils/errorHandler';
@@ -18,6 +18,9 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
   const [filter, setFilter] = useState('today');
   const [search, setSearch] = useState('');
   const [printing, setPrinting] = useState(false);
+  const [showMoney, setShowMoney] = useState(false);
+
+  const displayMoney = useCallback((val) => showMoney ? formatCurrency(val) : 'Rp •••••••', [showMoney]);
 
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -119,9 +122,18 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Riwayat Transaksi</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Semua aktivitas penjualan</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold">Riwayat Transaksi</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Semua aktivitas penjualan</p>
+          </div>
+          <button 
+            onClick={() => setShowMoney(!showMoney)}
+            className="p-2 ml-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 transition-all shadow-sm"
+            title={showMoney ? "Sembunyikan Saldo" : "Tampilkan Saldo"}
+          >
+            {showMoney ? <Eye size={20} /> : <EyeOff size={20} />}
+          </button>
         </div>
       </div>
 
@@ -139,14 +151,14 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
             <TrendingUp size={16} className="text-emerald-500" />
             <span className="text-xs text-gray-500 font-medium">Total</span>
           </div>
-          <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 truncate">{formatCurrency(stats.total)}</p>
+          <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 truncate">{displayMoney(stats.total)}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-2">
             <ShoppingBag size={16} className="text-purple-500" />
             <span className="text-xs text-gray-500 font-medium">Rata-rata</span>
           </div>
-          <p className="text-base font-bold text-purple-600 dark:text-purple-400 truncate">{formatCurrency(stats.avg)}</p>
+          <p className="text-base font-bold text-purple-600 dark:text-purple-400 truncate">{displayMoney(stats.avg)}</p>
         </div>
       </div>
 
@@ -210,7 +222,7 @@ export function TransactionsPage({ printerService, printerConnected, onShowToast
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(trx.grand_total)}</p>
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400">{displayMoney(trx.grand_total)}</p>
                   </div>
                   <ChevronRight size={18} className="text-gray-300 dark:text-gray-600" />
                 </div>
