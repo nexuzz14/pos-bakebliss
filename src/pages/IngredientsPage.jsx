@@ -60,12 +60,14 @@ export function IngredientsPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const parseDecimal = (val) => Number(String(val).replace(',', '.')) || 0;
+
       const payload = {
         name: form.name.trim(),
         unit: form.unit,
-        stock: Number(form.stock) || 0,
-        min_stock: Number(form.min_stock) || 0,
-        price_per_unit: Number(form.price_per_unit) || 0,
+        stock: parseDecimal(form.stock),
+        min_stock: parseDecimal(form.min_stock),
+        price_per_unit: parseDecimal(form.price_per_unit),
       };
 
       if (editId) {
@@ -206,7 +208,7 @@ export function IngredientsPage() {
               {/* Harga/Unit */}
               <div>
                 <label className="block text-sm font-medium mb-1.5">Harga per Unit (Rp)</label>
-                <input type="number" value={form.price_per_unit} min="0" placeholder="0"
+                <input type="text" inputMode="decimal" value={form.price_per_unit} placeholder="0"
                   onChange={e => setForm(f => ({ ...f, price_per_unit: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -215,7 +217,7 @@ export function IngredientsPage() {
               {/* Stok */}
               <div>
                 <label className="block text-sm font-medium mb-1.5">Stok Saat Ini</label>
-                <input type="number" value={form.stock} min="0" step="0.001" placeholder="0"
+                <input type="text" inputMode="decimal" value={form.stock} placeholder="0"
                   onChange={e => setForm(f => ({ ...f, stock: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -224,7 +226,7 @@ export function IngredientsPage() {
               {/* Min Stok */}
               <div>
                 <label className="block text-sm font-medium mb-1.5">Min. Stok (alert)</label>
-                <input type="number" value={form.min_stock} min="0" step="0.001" placeholder="0"
+                <input type="text" inputMode="decimal" value={form.min_stock} placeholder="0"
                   onChange={e => setForm(f => ({ ...f, min_stock: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
                 />
