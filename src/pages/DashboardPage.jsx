@@ -43,13 +43,16 @@ export function DashboardPage() {
       const prevMonthStart = prevMonthStartObj.toISOString();
       const prevMonthEnd = prevMonthEndObj.toISOString();
 
+      const dateStartStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+      const dateEndStr = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0];
+
       // Fetch semua parallel
       const [todayRes, monthRes, prevMonthRes, itemsRes, cashRes] = await Promise.all([
         isCurrentMonth ? supabase.from('transactions').select('grand_total').gte('created_at', todayStart) : Promise.resolve({ data: [] }),
         supabase.from('transactions').select('grand_total, created_at').gte('created_at', monthStart).lte('created_at', monthEnd),
         supabase.from('transactions').select('grand_total').gte('created_at', prevMonthStart).lte('created_at', prevMonthEnd),
         supabase.from('transaction_items').select('product_name, qty, subtotal').gte('created_at', monthStart).lte('created_at', monthEnd),
-        supabase.from('cash_flow').select('type, amount').gte('created_at', monthStart).lte('created_at', monthEnd)
+        supabase.from('cash_flow').select('type, amount').gte('date', dateStartStr).lte('date', dateEndStr)
       ]);
 
       // Stats
