@@ -314,4 +314,111 @@ export class BluetoothPrinterService {
   isConnected() {
     return this.device && this.device.gatt.connected;
   }
+
+  printViaSystemBrowser(data) {
+    // Solusi universal cetak struk thermal 58mm untuk Safari, Firefox, iOS, dan semua browser
+    const printWindow = window.open('', '_blank', 'width=380,height=600');
+    if (!printWindow) {
+      alert('Pop-up browser terblokir. Izinkan pop-up untuk mencetak struk.');
+      return false;
+    }
+
+    const itemsHtml = (data.items || []).map(item => `
+      <div style="margin-bottom: 6px;">
+        <div style="font-weight: 700;">${item.name}</div>
+        <div style="display: flex; justify-content: space-between; color: #444;">
+          <span>${item.qty}x @ Rp${Number(item.price || 0).toLocaleString('id-ID')}</span>
+          <span style="font-weight: 700;">Rp${Number((item.qty || 1) * (item.price || 0)).toLocaleString('id-ID')}</span>
+        </div>
+      </div>
+    `).join('');
+
+    const grandTotal = Number(data.total) || 0;
+    const paid = Number(data.paid) || grandTotal;
+    const change = Math.max(0, paid - grandTotal);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Struk POS BakeBliss - ${data.id || 'TRX'}</title>
+        <style>
+          @media print {
+            @page {
+              size: 58mm auto;
+              margin: 2mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+          }
+          body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            color: #000;
+            width: 54mm;
+            margin: 0 auto;
+            padding: 8px 4px;
+            line-height: 1.35;
+          }
+          .text-center { text-align: center; }
+          .font-bold { font-weight: bold; }
+          .divider {
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+          }
+          .row {
+            display: flex;
+            justify-content: space-between;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="text-center">
+          <div class="font-bold" style="font-size: 13px;">${STORE_INFO.name}</div>
+          <div>${STORE_INFO.tagline || 'Artisan Bakery & Patisserie'}</div>
+          <div>${STORE_INFO.address || ''}</div>
+        </div>
+        <div class="divider"></div>
+        <div>NO  : #${(data.id || '').toString().slice(-8)}</div>
+        <div>TGL : ${new Date(data.date || Date.now()).toLocaleString('id-ID')}</div>
+        <div>KSR : ${data.cashier || 'Cashier'}</div>
+        <div class="divider"></div>
+        ${itemsHtml}
+        <div class="divider"></div>
+        <div class="row font-bold" style="font-size: 12px;">
+          <span>TOTAL:</span>
+          <span>Rp${grandTotal.toLocaleString('id-ID')}</span>
+        </div>
+        <div class="row">
+          <span>BAYAR:</span>
+          <span>Rp${paid.toLocaleString('id-ID')}</span>
+        </div>
+        <div class="row font-bold">
+          <span>KEMBALI:</span>
+          <span>Rp${change.toLocaleString('id-ID')}</span>
+        </div>
+        <div class="divider"></div>
+        <div class="text-center" style="margin-top: 8px;">
+          <div>Terima kasih atas kunjungan Anda!</div>
+          <div style="font-size: 10px; margin-top: 4px;">Powered by BakeBliss POS</div>
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    return true;
+  }
 }

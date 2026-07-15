@@ -2,3 +2,118 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply bg-[#f7f6fb] text-[#1e1c29] dark:bg-[#0e0d16] dark:text-[#f4f2f9] transition-colors duration-300;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  input, select, textarea {
+    color: #1e1c29;
+  }
+
+  .dark input, .dark select, .dark textarea {
+    color: #f4f2f9;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  .dark input::placeholder, .dark textarea::placeholder {
+    color: #6b7280;
+  }
+
+  label {
+    color: #374151;
+  }
+
+  .dark label {
+    color: #d1d5db;
+  }
+
+  option {
+    background-color: #ffffff;
+    color: #1e1c29;
+  }
+
+  .dark option {
+    background-color: #181620;
+    color: #f4f2f9;
+  }
+}
+
+/* Custom Berry & Midnight Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(244, 63, 94, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 63, 94, 0.5);
+}
+
+/* Glassmorphism & Velvet Glow Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark .glass-panel {
+  background: rgba(21, 19, 32, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glow-berry {
+  box-shadow: 0 10px 30px -10px rgba(244, 63, 94, 0.4);
+}
+
+.glow-berry-sm {
+  box-shadow: 0 4px 15px -3px rgba(244, 63, 94, 0.35);
+}
+
+.glow-indigo {
+  box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.4);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hide scrollbar for category tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

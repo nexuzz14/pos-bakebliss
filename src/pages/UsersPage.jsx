@@ -2,20 +2,35 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  Users, UserPlus, Pencil, Trash2, X, Shield,
-  ShoppingCart, ChevronDown, Search, CheckCircle, AlertCircle
+  Users,
+  UserPlus,
+  Pencil,
+  Trash2,
+  X,
+  Shield,
+  ShoppingCart,
+  Search,
+  CheckCircle,
+  AlertCircle,
+  Crown,
+  ChefHat,
+  Mail,
+  Lock,
+  UserCheck
 } from 'lucide-react';
 
 const ROLE_CONFIG = {
   admin: {
-    label: 'Admin',
-    icon: <Shield size={14} />,
-    color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+    label: 'Administrator POS',
+    badge: '👑 Admin Executive',
+    icon: <Crown size={15} />,
+    pill: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
   },
   cashier: {
-    label: 'Kasir',
-    icon: <ShoppingCart size={14} />,
-    color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+    label: 'Kasir Cabang',
+    badge: '🥐 Kasir Patisserie',
+    icon: <ChefHat size={15} />,
+    pill: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30'
   },
 };
 
@@ -65,16 +80,12 @@ export function UsersPage() {
     u.full_name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Add user (via Supabase Admin API — createUser membutuhkan service_role di backend)
-  // Di sisi client kita pakai signUp + set metadata, lalu update profile
   const handleAddUser = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      // Simpan session saat ini agar tidak ter-logout saat createUser
       const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-      // Sign up user baru (auto-confirm diaktifkan di Supabase → Authentication → Settings)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: addForm.email,
         password: addForm.password,
@@ -84,7 +95,6 @@ export function UsersPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('Gagal membuat user');
 
-      // Upsert profile dengan role & nama
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -96,7 +106,6 @@ export function UsersPage() {
 
       if (profileError) throw profileError;
 
-      // Pulihkan session admin yang sedang aktif
       if (currentSession) {
         await supabase.auth.setSession({
           access_token: currentSession.access_token,
@@ -109,31 +118,30 @@ export function UsersPage() {
       setShowAddForm(false);
       fetchData();
     } catch (err) {
-      showToast('Gagal tambah user: ' + err.message, 'error');
+      showToast('Gagal menambahkan user: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleUpdateRole = async (e) => {
+  const handleEditUser = async (e) => {
     e.preventDefault();
-    if (!editUser) return;
     setSaving(true);
     try {
       const { error } = await supabase
         .from('profiles')
         .update({
-          role_id: parseInt(editUser.role_id),
-          full_name: editUser.full_name
+          full_name: editUser.full_name,
+          role_id: parseInt(editUser.role_id)
         })
         .eq('id', editUser.id);
 
       if (error) throw error;
-      showToast('Data user berhasil diupdate!');
+      showToast('Profil pengguna berhasil diperbarui!');
       setEditUser(null);
       fetchData();
     } catch (err) {
-      showToast('Gagal update: ' + err.message, 'error');
+      showToast('Gagal mengupdate user: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -143,271 +151,276 @@ export function UsersPage() {
     if (!deleteUser) return;
     setSaving(true);
     try {
-      // Hapus profile saja (hard delete auth user butuh service_role key)
-      // Auth user tetap ada tapi tidak bisa login karena profile tidak ada
       const { error } = await supabase
         .from('profiles')
         .delete()
         .eq('id', deleteUser.id);
 
       if (error) throw error;
-      showToast(`User ${deleteUser.email} berhasil dihapus dari sistem.`);
+      showToast('User berhasil dihapus!');
       setDeleteUser(null);
       fetchData();
     } catch (err) {
-      showToast('Gagal hapus: ' + err.message, 'error');
+      showToast('Gagal menghapus user: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
   };
 
-
-  const getRoleName = (user) => user.roles?.name || 'cashier';
-
   return (
-    <div className="space-y-6">
-      {/* Toast */}
+    <div className="space-y-6 relative">
+      {/* Floating Toast Alert */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium transition-all ${
-          toast.type === 'error'
-            ? 'bg-red-600 text-white'
-            : 'bg-green-600 text-white'
-        }`}>
-          {toast.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
-          {toast.message}
+        <div className="fixed top-6 right-6 z-50 animate-fade-in">
+          <div className={`px-5 py-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 text-xs font-bold ${
+            toast.type === 'error'
+              ? 'bg-rose-500 text-white border-rose-400'
+              : 'bg-stone-900 text-rose-300 border-rose-500/50'
+          }`}>
+            {toast.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}
+            <span>{toast.message}</span>
+          </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-rose-500/10 via-indigo-500/10 to-transparent p-6 rounded-3xl border border-rose-500/20">
         <div>
-          <h2 className="text-2xl font-bold">👥 Kelola User</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Tambah, edit role, dan hapus pengguna</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-rose-500 text-white shadow-sm">
+              Hak Akses & Staf
+            </span>
+            <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">Manajemen Operator POS</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight text-stone-800 dark:text-stone-100">
+            Daftar Pengguna POS
+          </h2>
         </div>
+
         <button
-          onClick={() => { setShowAddForm(true); setEditUser(null); }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors"
+          onClick={() => { setEditUser(null); setShowAddForm(true); }}
+          className="bg-gradient-to-r from-rose-500 via-pink-600 to-indigo-600 hover:from-rose-600 hover:to-indigo-700 text-white px-6 py-3.5 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-rose-500/25 active:scale-95 transition-all"
         >
-          <UserPlus size={16} />
-          <span className="hidden sm:inline">Tambah User</span>
+          <UserPlus size={18} />
+          <span>Tambah Pengguna Baru</span>
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total User</p>
-          <p className="text-2xl font-bold mt-1">{users.length}</p>
+      {/* Stats Summary Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-white/90 dark:bg-[#1b1a23]/90 backdrop-blur-xl p-5 rounded-3xl border border-stone-200/80 dark:border-stone-800/80 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Total Akun Terdaftar</span>
+            <p className="text-2xl font-extrabold font-display text-stone-800 dark:text-stone-100 mt-1">
+              {users.length} <span className="text-xs font-normal text-stone-400">Pengguna</span>
+            </p>
+          </div>
+          <div className="p-3 bg-rose-500/10 rounded-2xl text-rose-500">
+            <Users size={24} />
+          </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Admin</p>
-          <p className="text-2xl font-bold mt-1 text-purple-600">
-            {users.filter(u => u.roles?.name === 'admin').length}
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 col-span-2 sm:col-span-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Kasir</p>
-          <p className="text-2xl font-bold mt-1 text-blue-600">
-            {users.filter(u => u.roles?.name === 'cashier').length}
-          </p>
+
+        <div className="bg-white/90 dark:bg-[#1b1a23]/90 backdrop-blur-xl p-5 rounded-3xl border border-stone-200/80 dark:border-stone-800/80 shadow-sm flex items-center justify-between">
+          <div>
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Admin vs Kasir Cabang</span>
+            <div className="flex items-center gap-4 mt-1">
+              <span className="text-sm font-bold text-rose-500">
+                {users.filter(u => u.roles?.name === 'admin').length} Admin
+              </span>
+              <span className="text-sm font-bold text-indigo-500">
+                {users.filter(u => u.roles?.name === 'cashier').length} Kasir
+              </span>
+            </div>
+          </div>
+          <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500">
+            <Shield size={24} />
+          </div>
         </div>
       </div>
 
-      {/* Add User Form */}
+      {/* Form Add New User MODAL */}
       {showAddForm && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">Tambah User Baru</h3>
-            <button onClick={() => setShowAddForm(false)}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <X size={20} />
-            </button>
-          </div>
-          <form onSubmit={handleAddUser} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Nama Lengkap</label>
-                <input type="text" value={addForm.full_name}
-                  onChange={e => setAddForm(f => ({ ...f, full_name: e.target.value }))}
-                  placeholder="cth: Siti Rahayu"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
-                />
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-[#181620] rounded-3xl border border-stone-200 dark:border-stone-800 p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+              <h3 className="font-extrabold font-display text-lg text-stone-800 dark:text-stone-100">
+                Tambah Pengguna / Kasir Baru
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                className="p-1.5 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl text-stone-400 hover:text-stone-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1.5">Nama Lengkap</label>
+                  <input
+                    type="text"
+                    value={addForm.full_name}
+                    onChange={e => setAddForm(f => ({ ...f, full_name: e.target.value }))}
+                    placeholder="Contoh: Rina Amalia"
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#14131a] border border-stone-200 dark:border-stone-800 outline-none focus:border-rose-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1.5">Alamat Email</label>
+                  <input
+                    type="email"
+                    value={addForm.email}
+                    onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="kasir.rina@bakebliss.com"
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#14131a] border border-stone-200 dark:border-stone-800 outline-none focus:border-rose-500 text-sm font-medium"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Email</label>
-                <input type="email" value={addForm.email} required
-                  onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))}
-                  placeholder="email@bakebliss.com"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Password</label>
-                <input type="password" value={addForm.password} required minLength={6}
-                  onChange={e => setAddForm(f => ({ ...f, password: e.target.value }))}
-                  placeholder="Min. 6 karakter"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Role</label>
-                <div className="relative">
-                  <select value={addForm.role_id}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1.5">Kata Sandi (Password)</label>
+                  <input
+                    type="password"
+                    value={addForm.password}
+                    onChange={e => setAddForm(f => ({ ...f, password: e.target.value }))}
+                    placeholder="Minimal 6 karakter"
+                    required
+                    minLength={6}
+                    className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#14131a] border border-stone-200 dark:border-stone-800 outline-none focus:border-rose-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1.5">Hak Akses (Role)</label>
+                  <select
+                    value={addForm.role_id}
                     onChange={e => setAddForm(f => ({ ...f, role_id: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-10">
-                    {roles.map(r => (
-                      <option key={r.id} value={r.id}>
-                        {r.name === 'admin' ? '🛡 Admin' : '🛒 Kasir'}
-                      </option>
-                    ))}
+                    className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#14131a] border border-stone-200 dark:border-stone-800 outline-none focus:border-rose-500 text-sm font-bold"
+                  >
+                    <option value="2">🥐 Kasir Cabang (Cashier)</option>
+                    <option value="1">👑 Admin Executive</option>
                   </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setShowAddForm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                Batal
-              </button>
-              <button type="submit" disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50 transition-colors">
-                {saving ? 'Menyimpan...' : 'Tambah User'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
-      {/* Edit Role Form */}
-      {editUser && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-lg">Edit User</h3>
-            <button onClick={() => setEditUser(null)}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <X size={20} />
-            </button>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-7 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-indigo-600 hover:from-rose-600 hover:to-indigo-700 text-white font-extrabold text-xs shadow-md disabled:opacity-50"
+                >
+                  {saving ? 'Membuat Akun...' : 'Buat Akun Pengguna'}
+                </button>
+              </div>
+            </form>
           </div>
-          <form onSubmit={handleUpdateRole} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Nama Lengkap</label>
-                <input type="text" value={editUser.full_name || ''}
-                  onChange={e => setEditUser(u => ({ ...u, full_name: e.target.value }))}
-                  placeholder="Nama lengkap"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Email</label>
-                <input type="text" value={editUser.email || ''} disabled
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium mb-2">Ganti Role</label>
-                <div className="flex gap-3">
-                  {roles.map(r => (
-                    <button key={r.id} type="button"
-                      onClick={() => setEditUser(u => ({ ...u, role_id: r.id }))}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-medium text-sm transition-colors ${
-                        editUser.role_id === r.id
-                          ? r.name === 'admin'
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400'
-                            : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
-                      }`}>
-                      {r.name === 'admin' ? <Shield size={16} /> : <ShoppingCart size={16} />}
-                      {r.name === 'admin' ? 'Admin' : 'Kasir'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setEditUser(null)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                Batal
-              </button>
-              <button type="submit" disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50 transition-colors">
-                {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </button>
-            </div>
-          </form>
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input type="text" value={search} placeholder="Cari berdasarkan nama atau email..."
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-        />
+      {/* Search Filter Bar */}
+      <div className="bg-white/90 dark:bg-[#1b1a23]/90 backdrop-blur-xl p-4 rounded-3xl border border-stone-200/80 dark:border-stone-800/80 shadow-sm flex items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cari nama atau email pengguna..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-stone-100/80 dark:bg-[#14131a] border border-stone-200 dark:border-stone-800 outline-none focus:ring-2 focus:ring-rose-500 text-sm font-medium"
+          />
+        </div>
       </div>
 
-      {/* User List */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      {/* Users Catalog Grid / List */}
+      <div className="bg-white/90 dark:bg-[#1b1a23]/90 backdrop-blur-xl rounded-3xl border border-stone-200/80 dark:border-stone-800/80 overflow-hidden shadow-sm">
         {loading ? (
-          <div className="p-12 text-center text-gray-400">Memuat data...</div>
+          <div className="p-6 space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-20 bg-stone-100 dark:bg-stone-800 rounded-2xl animate-pulse" />
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center">
-            <Users size={48} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-            <p className="text-gray-500">{search ? 'User tidak ditemukan' : 'Belum ada user'}</p>
+          <div className="py-16 text-center text-stone-400">
+            <Users size={40} className="mx-auto mb-3 opacity-30" />
+            <p className="font-bold text-stone-600 dark:text-stone-300">Tidak Ada Pengguna Ditemukan</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="divide-y divide-stone-100 dark:divide-stone-800/60">
             {filtered.map(u => {
-              const roleName = getRoleName(u);
-              const roleConf = ROLE_CONFIG[roleName] || ROLE_CONFIG.cashier;
-              const isMe = u.id === currentUser?.id;
+              const roleName = u.roles?.name || 'cashier';
+              const roleInfo = ROLE_CONFIG[roleName] || ROLE_CONFIG.cashier;
+              const isCurrent = currentUser?.id === u.id;
 
               return (
-                <div key={u.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {(u.full_name || u.email || '?')[0].toUpperCase()}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold truncate">
-                        {u.full_name || '—'}
-                      </span>
-                      {isMe && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                          Kamu
-                        </span>
-                      )}
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${roleConf.color}`}>
-                        {roleConf.icon}
-                        {roleConf.label}
-                      </span>
+                <div
+                  key={u.id}
+                  className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-stone-50/70 dark:hover:bg-stone-800/30 transition-colors"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-600 to-indigo-600 text-white flex items-center justify-center font-extrabold font-display text-lg shadow-md shrink-0">
+                      {u.full_name?.charAt(0)?.toUpperCase() || u.email?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{u.email}</p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-bold text-sm text-stone-800 dark:text-stone-100 truncate">
+                          {u.full_name || 'Pengguna Tanpa Nama'}
+                        </h4>
+                        {isCurrent && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
+                            (Anda)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-stone-400 flex items-center gap-1.5 truncate">
+                        <Mail size={12} />
+                        <span>{u.email}</span>
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => setEditUser({ ...u, role_id: u.role_id })}
-                      className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 transition-colors"
-                      title="Edit"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    {!isMe && (
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className={`px-3 py-1 rounded-xl text-xs font-extrabold inline-flex items-center gap-1.5 ${roleInfo.pill}`}>
+                      {roleInfo.icon}
+                      <span>{roleInfo.badge}</span>
+                    </span>
+
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => setDeleteUser(u)}
-                        className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl text-red-500 dark:text-red-400 transition-colors"
-                        title="Hapus"
+                        onClick={() => {
+                          setEditUser({
+                            id: u.id,
+                            full_name: u.full_name || '',
+                            role_id: String(u.role_id || '2')
+                          });
+                        }}
+                        className="p-2 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-rose-500 transition-colors"
+                        title="Edit Profil/Role"
                       >
-                        <Trash2 size={15} />
+                        <Pencil size={15} />
                       </button>
-                    )}
+                      {!isCurrent && (
+                        <button
+                          onClick={() => setDeleteUser(u)}
+                          className="p-2 rounded-xl hover:bg-rose-500/15 text-stone-400 hover:text-rose-500 transition-colors"
+                          title="Hapus Akun Pengguna"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -416,23 +429,90 @@ export function UsersPage() {
         )}
       </div>
 
-      {/* Delete Modal */}
+      {/* Edit User Modal */}
+      {editUser && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#181620] rounded-3xl p-6 max-w-md w-full border border-stone-200 dark:border-stone-800 shadow-2xl space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+              <h4 className="font-extrabold font-display text-base text-stone-800 dark:text-stone-100">
+                Edit Profil Pengguna
+              </h4>
+              <button
+                onClick={() => setEditUser(null)}
+                className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl text-stone-400"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditUser} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1.5">Nama Lengkap</label>
+                <input
+                  type="text"
+                  value={editUser.full_name}
+                  onChange={e => setEditUser(u => ({ ...u, full_name: e.target.value }))}
+                  required
+                  className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#131219] border border-stone-200 dark:border-stone-800 outline-none focus:border-rose-500 text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-400 mb-1.5">Hak Akses (Role)</label>
+                <select
+                  value={editUser.role_id}
+                  onChange={e => setEditUser(u => ({ ...u, role_id: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#131219] border border-stone-200 dark:border-stone-800 outline-none focus:border-rose-500 text-sm font-bold"
+                >
+                  <option value="2">🥐 Kasir Cabang (Cashier)</option>
+                  <option value="1">👑 Admin Executive</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditUser(null)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-stone-500"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-indigo-600 text-white font-extrabold text-xs shadow-md"
+                >
+                  {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
       {deleteUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="font-bold text-lg mb-1">Hapus User?</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
-              <span className="font-semibold text-gray-700 dark:text-gray-300">{deleteUser.email}</span>
-            </p>
-            <p className="text-red-500 text-sm mb-6">Tindakan ini tidak dapat dibatalkan.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteUser(null)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#181620] rounded-3xl p-6 max-w-sm w-full border border-stone-200 dark:border-stone-800 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-500 flex items-center justify-center mx-auto text-xl">
+              ⚠️
+            </div>
+            <div>
+              <h4 className="font-extrabold font-display text-base text-stone-800 dark:text-stone-100">Hapus Pengguna Ini?</h4>
+              <p className="text-xs text-stone-400 mt-1">Akun {deleteUser.email} akan dihapus dan tidak bisa login lagi.</p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setDeleteUser(null)}
+                className="flex-1 py-2.5 rounded-xl bg-stone-100 dark:bg-stone-800 font-bold text-xs text-stone-600 dark:text-stone-300"
+              >
                 Batal
               </button>
-              <button onClick={handleDeleteUser} disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium disabled:opacity-50">
-                {saving ? 'Menghapus...' : 'Hapus'}
+              <button
+                onClick={handleDeleteUser}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md"
+              >
+                Ya, Hapus
               </button>
             </div>
           </div>

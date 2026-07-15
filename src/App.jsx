@@ -51,6 +51,19 @@ export default function App() {
   }, []);
 
   const connectPrinter = async () => {
+    if (!printerService.isSupported()) {
+      showToast('Safari/Firefox otomatis menggunakan mode Cetak Struk Sistem (AirPrint/USB)', 'info');
+      alert(
+        'ℹ️ Keterangan Browser Safari / Firefox:\n\n' +
+        'Apple Safari dan Mozilla Firefox tidak mengizinkan koneksi Web Bluetooth langsung dari browser.\n\n' +
+        '✅ SOLUSI DI SAFARI / MAC / iOS:\n' +
+        'Kamu tetap bisa mencetak struk kasir! BakeBliss POS otomatis beralih ke mode "Cetak Struk Sistem" yang kompatibel 100% dengan AirPrint, printer USB, dan printer thermal sistem saat bayar pesanan.\n\n' +
+        '💡 TIPS UNTUK iOS (iPhone/iPad):\n' +
+        'Jika ingin konek langsung via Bluetooth Web BLE di iPhone/iPad, gunakan aplikasi browser gratis "Bluefy - Web BLE Browser" di App Store.'
+      );
+      return;
+    }
+
     setLoading(true);
     const connected = await printerService.connect();
     setPrinterConnected(connected);
